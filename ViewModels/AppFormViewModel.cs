@@ -1,3 +1,4 @@
+using AppManager2.AMUtils;
 using AppManager2.Commands;
 using AppManager2.Config;
 using AppManager2.Models;
@@ -9,8 +10,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
-using System.Windows.Input;
-using Utils;
 
 namespace AppManager2.ViewModels
 {
@@ -309,16 +308,16 @@ namespace AppManager2.ViewModels
             // java项目根据jar包地址生成对应的启动/停止bat脚本
             if (Configs.AppTypeJava.Equals(appSection.Type))
             {
-                Utils.JavaAppUtils.LoadSettings();
+                JavaAppUtils.LoadSettings();
 
-                var result = Utils.JavaAppUtils.CreateStartBat(appSection, Configs.LogFileInfo, Configs.LogFileError);
+                var result = JavaAppUtils.CreateStartBat(appSection, Configs.LogFileInfo, Configs.LogFileError);
                 if (!bool.TrueString.Equals(result))
                 {
                     // 应用信息已保存，脚本生成失败单独提示
                     MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                Utils.JavaAppUtils.CreateStopBat(appSection);
+                JavaAppUtils.CreateStopBat(appSection);
             }
         }
 

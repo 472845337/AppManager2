@@ -4,7 +4,6 @@ using AppManager2.Models;
 using AppManager2.Services;
 using AppManager2.Views;
 using PropertyChanged;
-using System;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 

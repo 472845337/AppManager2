@@ -1,5 +1,3 @@
-using System;
-
 namespace AppManager2.Models
 {
     public class AppSection

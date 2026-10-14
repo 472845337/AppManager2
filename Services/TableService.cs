@@ -48,7 +48,7 @@ namespace AppManager2.Services
         public virtual long Insert(T entity)
         {
             if (entity == null) throw new ArgumentNullException(nameof(entity));
-            
+
             entity.CreateTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
             entity.UpdateTime = entity.CreateTime;
 
@@ -173,7 +173,7 @@ namespace AppManager2.Services
 
                 string columnName = paramAttr.Name;
                 var value = prop.GetValue(entity);
-                
+
                 if (value != null)
                     dict[columnName] = value;
             }

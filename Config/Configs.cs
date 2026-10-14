@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace AppManager2.Config
 {
@@ -56,6 +55,8 @@ namespace AppManager2.Config
         public const string IniKeyAppSplitRatio = "split_ratio";
         // 项目树组的收缩状态（保存收缩组名单，|分隔）
         public const string IniKeyAppTreeCollapsed = "tree_collapsed";
+        // 上次关闭时选中的主Tab索引（0应用管理/1设置/2工具/3帮助）
+        public const string IniKeyAppMainTabIndex = "main_tab_index";
 
         // 工具页PostDog（对应老项目IniKeyTool*；分隔位置改按百分比存储，避免绝对像素在不同窗口尺寸下溢出）
         public const string IniKeyToolSplitPct = "split-pct";
@@ -123,7 +124,7 @@ namespace AppManager2.Config
         public const string SwitchOn = "on";
         public const string SwitchOff = "off";
 
-        public static int MonitorInterval = 5000;
+        public static int MonitorInterval = 5;
         public const int HttpDefaultTimeout = 15;
         public static int MonitorTimeout = 15;
 
@@ -136,5 +137,12 @@ namespace AppManager2.Config
         public const string ChildNodeBatImageKey = "cmd.ico";
         public const string ChildNodeExeImageKey = "exe.ico";
         public const string GroupNodeImageKey = "group.ico";
+
+        public static int Height;
+        public static int Width;
+        public static int Left;
+        public static int Top;
+
+        public static int SelectedIndex;
     }
 }

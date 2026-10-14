@@ -2,7 +2,7 @@ using AppManager2.Config;
 using System.IO;
 using System.Text;
 
-namespace AppManager2.Utils
+namespace AppManager2.AMUtils
 {
     internal static class FileUtils
     {

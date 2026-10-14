@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Utils;
-using FileUtils = AppManager2.Utils.FileUtils;
 
 namespace AppManager2.Services
 {
@@ -39,7 +38,7 @@ namespace AppManager2.Services
             switch (appSection.Type)
             {
                 case Configs.AppTypeJava:
-                    cliPath = FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart);
+                    cliPath = AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart);
                     break;
                 default:
                     // bat/exe及其它类型直接执行配置的路径
@@ -69,7 +68,7 @@ namespace AppManager2.Services
             string stopPath = appSection.Type switch
             {
                 Configs.AppTypeBat => appSection.StopApp,
-                Configs.AppTypeJava => FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop),
+                Configs.AppTypeJava => AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop),
                 _ => string.Empty
             };
             if (!string.IsNullOrEmpty(stopPath))
@@ -219,7 +218,7 @@ namespace AppManager2.Services
                     processStartInfo.Arguments = arguments;
                 }
 
-                var process = new Process { StartInfo = processStartInfo };
+                var process = new Process { StartInfo = processStartInfo, EnableRaisingEvents = true };
                 process.EnableRaisingEvents = true;
 
                 if (trackProcess)

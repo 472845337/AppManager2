@@ -24,10 +24,10 @@
         <Border Grid.Column="0" BorderBrush="#ccc" BorderThickness="1" Margin="5">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button Style="{StaticResource ButtonInfo_Style}" Content="刷新" Command="{Binding RefreshCommand}" Width="56" Margin="2"/>
-                    <Button Style="{StaticResource ButtonDanger_Style}" Content="删除" Command="{Binding DeleteCommand}" Width="56" Margin="2"/>
-                    <Button Style="{StaticResource ButtonDanger_Style}" Content="清空" Command="{Binding ClearCommand}" Width="56" Margin="2"/>
-                    <Button Style="{StaticResource ButtonWarning_Style}" Content="去重" Width="56" Margin="2" Click="DeduplicateButton_Click"
+                    <Button Style="{StaticResource Btn_Info}" Content="刷新" Command="{Binding RefreshCommand}" Width="56" Margin="2"/>
+                    <Button Style="{StaticResource Btn_Danger}" Content="删除" Command="{Binding DeleteCommand}" Width="56" Margin="2"/>
+                    <Button Style="{StaticResource Btn_Danger}" Content="清空" Command="{Binding ClearCommand}" Width="56" Margin="2"/>
+                    <Button Style="{StaticResource Btn_Warn}" Content="去重" Width="56" Margin="2" Click="DeduplicateButton_Click"
                             ToolTip="按链接/参数去重或清除异常记录">
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -37,7 +37,7 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
-                    <Button Style="{StaticResource ButtonPrimary_Style}" Content="重发" Command="{Binding SendAgainCommand}" Width="56" Margin="2"/>
+                    <Button Style="{StaticResource Btn_Pri}" Content="重发" Command="{Binding SendAgainCommand}" Width="56" Margin="2"/>
                 </StackPanel>
                 <ListBox ItemsSource="{Binding HttpSendList}" SelectedItem="{Binding SelectedHttpSend}"
                          VirtualizingPanel.IsVirtualizing="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">

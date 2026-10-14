@@ -1,13 +1,19 @@
 using System.Collections.Generic;
 
-namespace AppManager2.DataBase {
-    internal static class SQLiteFactory {
+namespace AppManager2.DataBase
+{
+    internal static class SQLiteFactory
+    {
         private static readonly Dictionary<string, SQLiteHelper> SqLiteHelperDic = new Dictionary<string, SQLiteHelper>();
 
-        public static SQLiteHelper GetSqLiteHelper(string dbName, string password) {
-            if (SqLiteHelperDic.ContainsKey(dbName)) {
+        public static SQLiteHelper GetSqLiteHelper(string dbName, string password)
+        {
+            if (SqLiteHelperDic.ContainsKey(dbName))
+            {
                 return SqLiteHelperDic[dbName];
-            } else {
+            }
+            else
+            {
                 var sqliteHelper = string.IsNullOrEmpty(password)
                     ? new SQLiteHelper(dbName)
                     : new SQLiteHelper(dbName, password);
@@ -17,8 +23,10 @@ namespace AppManager2.DataBase {
             }
         }
 
-        public static void CloseAllSqLite() {
-            foreach (var pair in SqLiteHelperDic) {
+        public static void CloseAllSqLite()
+        {
+            foreach (var pair in SqLiteHelperDic)
+            {
                 pair.Value.Close();
             }
             SqLiteHelperDic.Clear();

@@ -7,7 +7,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace AppManager2.Utils
+namespace AppManager2.AMUtils
 {
     /// <summary>
     /// exe图标提取工具（对应老项目 Utils/ExeIconUtils），提取结果缓存，避免重复IO

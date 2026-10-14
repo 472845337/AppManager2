@@ -194,7 +194,7 @@ namespace AppManager2.Services
         public void LoadFromIni()
         {
             var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.ProjectsIniPath);
-           
+
             _dictionary.Clear();
             _sections.Clear();
             GroupList = new List<string>();
@@ -239,7 +239,7 @@ namespace AppManager2.Services
         public void SaveToIni()
         {
             var iniData = new IniData();
-            
+
             foreach (var kvp in _dictionary)
             {
                 string section = kvp.Key;

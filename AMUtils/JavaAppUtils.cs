@@ -5,7 +5,7 @@ using System.IO;
 using System.Text;
 using Utils;
 
-namespace AppManager2.Utils
+namespace AppManager2.AMUtils
 {
     /// <summary>
     /// java进程工具，创建bat脚本（参考 AppManager 的生成方式）

@@ -90,7 +90,7 @@ namespace AppManager2.Services
         {
             if (_monitorTimer.Enabled)
             {
-                _monitorTimer.Interval = Configs.MonitorInterval;
+                _monitorTimer.Interval = Configs.MonitorInterval * 1000;
             }
         }
 

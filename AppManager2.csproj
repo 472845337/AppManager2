@@ -113,6 +113,7 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Converters\HalfConverter.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
@@ -160,9 +161,9 @@
     <Compile Include="Services\AppDbService.cs" />
     <Compile Include="Services\AppRunService.cs" />
     <Compile Include="Services\AppMonitorService.cs" />
-    <Compile Include="Utils\FileUtils.cs" />
-    <Compile Include="Utils\JavaAppUtils.cs" />
-    <Compile Include="Utils\ExeIconUtils.cs" />
+    <Compile Include="AMUtils\FileUtils.cs" />
+    <Compile Include="AMUtils\JavaAppUtils.cs" />
+    <Compile Include="AMUtils\ExeIconUtils.cs" />
     <Compile Include="Excep\BusinessException.cs" />
     <Compile Include="Views\ToolPageView.xaml.cs">
       <DependentUpon>ToolPageView.xaml</DependentUpon>

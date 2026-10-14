@@ -6,8 +6,10 @@ using System.Data.SQLite;
 using System.IO;
 using System.Text;
 
-namespace AppManager2.DataBase {
-    public class SQLiteHelper {
+namespace AppManager2.DataBase
+{
+    public class SQLiteHelper
+    {
         #region 字段
 
         /// <summary>
@@ -40,13 +42,16 @@ namespace AppManager2.DataBase {
         /// 根据数据库地址初始化
         /// </summary>
         /// <param name="dataFile">数据库地址</param>
-        public SQLiteHelper(string dataFile) {
-            if (null == dataFile) {
+        public SQLiteHelper(string dataFile)
+        {
+            if (null == dataFile)
+            {
                 throw new ArgumentNullException(nameof(dataFile));
             }
             this._mdataFile = AppDomain.CurrentDomain.BaseDirectory + dataFile;
             // this.mdataFile = dataFile;
-            if (!Rwl.ContainsKey(dataFile)) {
+            if (!Rwl.ContainsKey(dataFile))
+            {
                 _lockName = dataFile;
                 Rwl.Add(dataFile, new ClsLock());
             }
@@ -57,10 +62,12 @@ namespace AppManager2.DataBase {
         /// </summary>
         /// <param name="dataFile">数据库地址</param>
         /// <param name="passWord">数据库密码</param>
-        public SQLiteHelper(string dataFile, string passWord) {
+        public SQLiteHelper(string dataFile, string passWord)
+        {
             this._mdataFile = dataFile ?? throw new ArgumentNullException(nameof(dataFile));
             this._mPassWord = passWord ?? throw new ArgumentNullException(nameof(passWord));
-            if (!Rwl.ContainsKey(dataFile)) {
+            if (!Rwl.ContainsKey(dataFile))
+            {
                 _lockName = dataFile;
                 Rwl.Add(dataFile, new ClsLock());
             }
@@ -73,9 +80,11 @@ namespace AppManager2.DataBase {
         /// <summary>
         /// 打开 SQLiteManager 使用的数据库连接，连接失败时抛出异常（不再返回 null 掩盖原因）
         /// </summary>
-        public void Open() {
+        public void Open()
+        {
             _mConn = OpenConnection(this._mdataFile, _mPassWord);
-            if (_mConn == null) {
+            if (_mConn == null)
+            {
                 throw new Exception($"打开数据库失败：{_mdataFile}");
             }
         }
@@ -83,14 +92,20 @@ namespace AppManager2.DataBase {
         /// <summary>
         /// 关闭连接
         /// </summary>
-        public void Close() {
-            if (this._mConn != null) {
-                try {
+        public void Close()
+        {
+            if (this._mConn != null)
+            {
+                try
+                {
                     this._mConn.Close();
-                    if (Rwl.ContainsKey(_lockName)) {
+                    if (Rwl.ContainsKey(_lockName))
+                    {
                         Rwl.Remove(_lockName);
                     }
-                } catch {
+                }
+                catch
+                {
                     Console.WriteLine("关闭失败");
                 }
             }
@@ -104,7 +119,8 @@ namespace AppManager2.DataBase {
         /// <summary>
         /// 开始事务
         /// </summary>
-        public void BeginTrain() {
+        public void BeginTrain()
+        {
             EnsureConnection();
             _dBtrans = _mConn.BeginTransaction();
         }
@@ -112,10 +128,14 @@ namespace AppManager2.DataBase {
         /// <summary>
         /// 提交事务
         /// </summary>
-        public void DbCommit() {
-            try {
+        public void DbCommit()
+        {
+            try
+            {
                 _dBtrans.Commit();
-            } catch (Exception) {
+            }
+            catch (Exception)
+            {
                 _dBtrans.Rollback();
             }
         }
@@ -130,22 +150,28 @@ namespace AppManager2.DataBase {
         /// <param name="dataFile"></param>
         /// <param name="password"></param>
         /// <returns>SQLiteConnection 类</returns>
-        private SQLiteConnection OpenConnection(string dataFile, string password) {
-            if (dataFile == null) {
+        private SQLiteConnection OpenConnection(string dataFile, string password)
+        {
+            if (dataFile == null)
+            {
                 throw new ArgumentNullException(nameof(dataFile));
             }
             // 确保库文件所在目录存在，否则 CreateFile 会抛异常
             var dir = Path.GetDirectoryName(Path.GetFullPath(dataFile));
-            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir)) {
+            if (!string.IsNullOrEmpty(dir) && !Directory.Exists(dir))
+            {
                 Directory.CreateDirectory(dir);
             }
-            if (!File.Exists(dataFile)) {
-                if (string.IsNullOrWhiteSpace(password)) {
+            if (!File.Exists(dataFile))
+            {
+                if (string.IsNullOrWhiteSpace(password))
+                {
                     SQLiteConnection.CreateFile(dataFile);
                 }
                 // 带密码时不能 CreateFile（会建成明文库），直接用带密码的连接创建加密库
             }
-            try {
+            try
+            {
                 SQLiteConnection conn = new SQLiteConnection();
                 SQLiteConnectionStringBuilder conStr = string.IsNullOrWhiteSpace(password)
                     ? new SQLiteConnectionStringBuilder { DataSource = dataFile }
@@ -153,7 +179,9 @@ namespace AppManager2.DataBase {
                 conn.ConnectionString = conStr.ToString();
                 conn.Open();
                 return conn;
-            } catch (Exception ex) {
+            }
+            catch (Exception ex)
+            {
                 throw new Exception($"连接数据库失败：{dataFile}，{ex.Message}", ex);
             }
         }
@@ -161,7 +189,8 @@ namespace AppManager2.DataBase {
         /// <summary>  
         /// 读取 或 设置 SQLiteManager 使用的数据库连接  
         /// </summary>  
-        public SQLiteConnection Connection {
+        public SQLiteConnection Connection
+        {
             get => _mConn;
         }
 
@@ -169,11 +198,14 @@ namespace AppManager2.DataBase {
         /// 确保数据库是连接状态
         /// </summary>
         /// <exception cref="Exception"></exception>
-        protected void EnsureConnection() {
-            if (this._mConn == null) {
+        protected void EnsureConnection()
+        {
+            if (this._mConn == null)
+            {
                 throw new Exception("SQLiteManager.Connection=null");
             }
-            if (_mConn.State != ConnectionState.Open) {
+            if (_mConn.State != ConnectionState.Open)
+            {
                 _mConn.Open();
             }
         }
@@ -182,7 +214,8 @@ namespace AppManager2.DataBase {
         /// 获取数据库文件的路径
         /// </summary>
         /// <returns></returns>
-        public string GetDataFile() {
+        public string GetDataFile()
+        {
             return this._mdataFile;
         }
 
@@ -191,13 +224,16 @@ namespace AppManager2.DataBase {
         /// </summary>  
         /// <param name="table"></param>  
         /// <returns>存在返回true，否则返回false</returns>  
-        public bool TableExists(string table) {
-            if (table == null) {
+        public bool TableExists(string table)
+        {
+            if (table == null)
+            {
                 throw new ArgumentNullException(nameof(table));
             }
             EnsureConnection();
             SQLiteDataReader reader = ExecuteReader("SELECT count(*) as c FROM sqlite_master WHERE type='table' AND name=@tableName ", new[] { new SQLiteParameter("tableName", table) });
-            if (reader == null) {
+            if (reader == null)
+            {
                 return false;
             }
             reader.Read();
@@ -212,13 +248,17 @@ namespace AppManager2.DataBase {
         /// VACUUM 命令（通过复制主数据库中的内容到一个临时数据库文件，然后清空主数据库，并从副本中重新载入原始的数据库文件）
         /// </summary>
         /// <returns></returns>
-        public bool Vacuum() {
-            try {
+        public bool Vacuum()
+        {
+            try
+            {
                 EnsureConnection();
                 using SQLiteCommand command = new SQLiteCommand("VACUUM", Connection);
                 command.ExecuteNonQuery();
                 return true;
-            } catch (SQLiteException) {
+            }
+            catch (SQLiteException)
+            {
                 return false;
             }
         }
@@ -233,21 +273,28 @@ namespace AppManager2.DataBase {
         /// <param name="sql"></param>
         /// <param name="paramArr">null 表示无参数</param>
         /// <returns></returns>  
-        public SQLiteDataReader ExecuteReader(string sql, SQLiteParameter[] paramArr) {
-            if (sql == null) {
+        public SQLiteDataReader ExecuteReader(string sql, SQLiteParameter[] paramArr)
+        {
+            if (sql == null)
+            {
                 throw new ArgumentNullException(nameof(sql));
             }
             EnsureConnection();
-            using (Rwl[_lockName].Read()) {
+            using (Rwl[_lockName].Read())
+            {
                 using SQLiteCommand cmd = new SQLiteCommand(sql, Connection);
-                if (paramArr != null) {
+                if (paramArr != null)
+                {
                     cmd.Parameters.AddRange(paramArr);
                 }
-                try {
+                try
+                {
                     SQLiteDataReader reader = cmd.ExecuteReader();
                     cmd.Parameters.Clear();
                     return reader;
-                } catch (Exception ex) {
+                }
+                catch (Exception ex)
+                {
                     Console.WriteLine($"execute sql [{sql}] Exp:{ex.Message}");
                     return null;
                 }
@@ -260,17 +307,22 @@ namespace AppManager2.DataBase {
         /// <param name="sql">SQL查询语句</param>
         /// <param name="paramArr">参数数组</param>
         /// <returns></returns>
-        public DataSet ExecuteDataSet(string sql, SQLiteParameter[] paramArr) {
-            if (sql == null) {
+        public DataSet ExecuteDataSet(string sql, SQLiteParameter[] paramArr)
+        {
+            if (sql == null)
+            {
                 throw new ArgumentNullException(nameof(sql));
             }
             this.EnsureConnection();
-            using (Rwl[_lockName].Read()) {
+            using (Rwl[_lockName].Read())
+            {
                 using SQLiteCommand cmd = new SQLiteCommand(sql, this.Connection);
-                if (paramArr != null) {
+                if (paramArr != null)
+                {
                     cmd.Parameters.AddRange(paramArr);
                 }
-                try {
+                try
+                {
                     SQLiteDataAdapter da = new SQLiteDataAdapter();
                     DataSet ds = new DataSet();
                     da.SelectCommand = cmd;
@@ -278,7 +330,9 @@ namespace AppManager2.DataBase {
                     cmd.Parameters.Clear();
                     da.Dispose();
                     return ds;
-                } catch (Exception) {
+                }
+                catch (Exception)
+                {
                     return null;
                 }
             }
@@ -291,17 +345,22 @@ namespace AppManager2.DataBase {
         /// <param name="sql">SQL语句</param>
         /// <param name="paramArr">SQL参数数组</param>
         /// <returns></returns>
-        public DataSet ExecuteDataSet(string strTable, string sql, SQLiteParameter[] paramArr) {
-            if (sql == null) {
+        public DataSet ExecuteDataSet(string strTable, string sql, SQLiteParameter[] paramArr)
+        {
+            if (sql == null)
+            {
                 throw new ArgumentNullException(nameof(sql));
             }
             this.EnsureConnection();
-            using (Rwl[_lockName].Read()) {
+            using (Rwl[_lockName].Read())
+            {
                 using SQLiteCommand cmd = new SQLiteCommand(sql, this.Connection);
-                if (paramArr != null) {
+                if (paramArr != null)
+                {
                     cmd.Parameters.AddRange(paramArr);
                 }
-                try {
+                try
+                {
                     SQLiteDataAdapter da = new SQLiteDataAdapter();
                     DataSet ds = new DataSet();
                     da.SelectCommand = cmd;
@@ -309,7 +368,9 @@ namespace AppManager2.DataBase {
                     cmd.Parameters.Clear();
                     da.Dispose();
                     return ds;
-                } catch (Exception) {
+                }
+                catch (Exception)
+                {
                     return null;
                 }
             }
@@ -321,23 +382,31 @@ namespace AppManager2.DataBase {
         /// <param name="sql"></param>
         /// <param name="paramArr"></param>
         /// <returns></returns>  
-        public int ExecuteNonQuery(string sql, SQLiteParameter[] paramArr) {
-            if (sql == null) {
+        public int ExecuteNonQuery(string sql, SQLiteParameter[] paramArr)
+        {
+            if (sql == null)
+            {
                 throw new ArgumentNullException(nameof(sql));
             }
             this.EnsureConnection();
-            using (Rwl[_lockName].Read()) {
-                try {
+            using (Rwl[_lockName].Read())
+            {
+                try
+                {
                     using SQLiteCommand cmd = new SQLiteCommand(sql, Connection);
-                    if (paramArr != null) {
-                        foreach (SQLiteParameter p in paramArr) {
+                    if (paramArr != null)
+                    {
+                        foreach (SQLiteParameter p in paramArr)
+                        {
                             cmd.Parameters.Add(p);
                         }
                     }
                     int c = cmd.ExecuteNonQuery();
                     cmd.Parameters.Clear();
                     return c;
-                } catch (SQLiteException) {
+                }
+                catch (SQLiteException)
+                {
                     return 0;
                 }
             }
@@ -350,22 +419,29 @@ namespace AppManager2.DataBase {
         /// <param name="sql"></param>  
         /// <param name="paramArr"></param>  
         /// <returns></returns>  
-        public object ExecuteScalar(string sql, SQLiteParameter[] paramArr) {
-            if (sql == null) {
+        public object ExecuteScalar(string sql, SQLiteParameter[] paramArr)
+        {
+            if (sql == null)
+            {
                 throw new ArgumentNullException(nameof(sql));
             }
             this.EnsureConnection();
-            using (Rwl[_lockName].Read()) {
+            using (Rwl[_lockName].Read())
+            {
                 using SQLiteCommand cmd = new SQLiteCommand(sql, Connection);
-                if (paramArr != null) {
+                if (paramArr != null)
+                {
                     cmd.Parameters.AddRange(paramArr);
                 }
-                try {
+                try
+                {
                     object reader = cmd.ExecuteScalar();
                     cmd.Parameters.Clear();
                     cmd.Dispose();
                     return reader;
-                } catch (Exception) {
+                }
+                catch (Exception)
+                {
                     return null;
                 }
             }
@@ -378,13 +454,16 @@ namespace AppManager2.DataBase {
         /// <param name="conditionCol"></param>  
         /// <param name="conditionVal"></param>  
         /// <returns></returns>  
-        public object QueryOne(string table, string conditionCol, object conditionVal) {
-            if (table == null) {
+        public object QueryOne(string table, string conditionCol, object conditionVal)
+        {
+            if (table == null)
+            {
                 throw new ArgumentNullException(nameof(table));
             }
             this.EnsureConnection();
             string sql = "select * from " + table;
-            if (conditionCol != null) {
+            if (conditionCol != null)
+            {
                 sql += " where " + conditionCol + "=@" + conditionCol;
             }
             object result = ExecuteScalar(sql, new[] { new SQLiteParameter(conditionCol, conditionVal) });
@@ -401,8 +480,10 @@ namespace AppManager2.DataBase {
         /// <param name="table">表名</param>  
         /// <param name="entity">字段值</param>  
         /// <returns>新增数据的ID</returns>  
-        public long InsertData(string table, Dictionary<string, object> entity) {
-            if (table == null) {
+        public long InsertData(string table, Dictionary<string, object> entity)
+        {
+            if (table == null)
+            {
                 throw new ArgumentNullException(nameof(table));
             }
             this.EnsureConnection();
@@ -418,16 +499,20 @@ namespace AppManager2.DataBase {
         /// <param name="where">查找符合条件的列</param>  
         /// <param name="whereParams">where条件中参数的值</param>  
         /// <returns></returns>  
-        public int Update(string table, Dictionary<string, object> entity, string where, SQLiteParameter[] whereParams) {
-            if (table == null) {
+        public int Update(string table, Dictionary<string, object> entity, string where, SQLiteParameter[] whereParams)
+        {
+            if (table == null)
+            {
                 throw new ArgumentNullException(nameof(table));
             }
             this.EnsureConnection();
             string sql = BuildUpdate(table, entity);
             SQLiteParameter[] parameter = BuildParamArray(entity);
-            if (where != null) {
+            if (where != null)
+            {
                 sql += " where " + where;
-                if (whereParams != null) {
+                if (whereParams != null)
+                {
                     SQLiteParameter[] newArr = new SQLiteParameter[(parameter.Length + whereParams.Length)];
                     Array.Copy(parameter, newArr, parameter.Length);
                     Array.Copy(whereParams, 0, newArr, parameter.Length, whereParams.Length);
@@ -444,13 +529,16 @@ namespace AppManager2.DataBase {
         /// <param name="where"></param>  
         /// <param name="whereParams"></param>  
         /// <returns></returns>  
-        public int Delete(string table, string where, SQLiteParameter[] whereParams) {
-            if (table == null) {
+        public int Delete(string table, string where, SQLiteParameter[] whereParams)
+        {
+            if (table == null)
+            {
                 throw new ArgumentNullException(nameof(table));
             }
             this.EnsureConnection();
             string sql = "delete from " + table + " ";
-            if (where != null) {
+            if (where != null)
+            {
                 sql += "where " + where;
             }
             return ExecuteNonQuery(sql, whereParams);
@@ -461,12 +549,15 @@ namespace AppManager2.DataBase {
         /// </summary>
         /// <param name="entity"></param>
         /// <returns></returns>
-        private SQLiteParameter[] BuildParamArray(Dictionary<string, object> entity) {
+        private SQLiteParameter[] BuildParamArray(Dictionary<string, object> entity)
+        {
             List<SQLiteParameter> list = new List<SQLiteParameter>();
-            foreach (string key in entity.Keys) {
+            foreach (string key in entity.Keys)
+            {
                 list.Add(new SQLiteParameter(key, entity[key]));
             }
-            if (list.Count == 0) {
+            if (list.Count == 0)
+            {
                 return null;
             }
             return list.ToArray();
@@ -478,17 +569,20 @@ namespace AppManager2.DataBase {
         /// <param name="table">表名</param>
         /// <param name="entity">参数字典</param>
         /// <returns>insert sql语句</returns>
-        private string BuildInsert(string table, Dictionary<string, object> entity) {
+        private string BuildInsert(string table, Dictionary<string, object> entity)
+        {
             StringBuilder buf = new StringBuilder();
             buf.Append("insert into ").Append(table);
             buf.Append(" (");
-            foreach (string key in entity.Keys) {
+            foreach (string key in entity.Keys)
+            {
                 buf.Append(key).Append(",");
             }
             buf.Remove(buf.Length - 1, 1); // 移除最后一个,
             buf.Append(") ");
             buf.Append("values(");
-            foreach (string key in entity.Keys) {
+            foreach (string key in entity.Keys)
+            {
                 buf.Append("@").Append(key).Append(","); // 创建一个参数
             }
             buf.Remove(buf.Length - 1, 1);
@@ -504,10 +598,12 @@ namespace AppManager2.DataBase {
         /// <param name="table">表名</param>
         /// <param name="entity">字典</param>
         /// <returns></returns>
-        private string BuildUpdate(string table, Dictionary<string, object> entity) {
+        private string BuildUpdate(string table, Dictionary<string, object> entity)
+        {
             StringBuilder buf = new StringBuilder();
             buf.Append("update ").Append(table).Append(" set ");
-            foreach (string key in entity.Keys) {
+            foreach (string key in entity.Keys)
+            {
                 buf.Append(key).Append("=").Append("@").Append(key).Append(",");
             }
             buf.Remove(buf.Length - 1, 1);

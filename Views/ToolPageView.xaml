@@ -11,16 +11,9 @@
     <UserControl.DataContext>
         <vm:ToolPageViewModel/>
     </UserControl.DataContext>
-    <UserControl.Resources>
-        <Style x:Key="MiniBtn_Style" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
-            <Setter Property="Width" Value="24"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Padding" Value="0"/>
-        </Style>
-    </UserControl.Resources>
 
     <!-- 对应老项目PostDog页：URL行 + Head区(记忆高度) + 参数/响应分栏(记忆高度) + 底部选项 -->
-    <Grid Margin="8">
+    <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -28,23 +21,23 @@
         </Grid.RowDefinitions>
 
         <!-- URL行：类型/地址/发送/保存/历史（保存/历史对应老项目SaveHttpButton/SendHistoryButton的纯图标按钮） -->
-        <DockPanel Grid.Row="0" Margin="0,0,0,6">
-            <ComboBox DockPanel.Dock="Left" Width="75" SelectedItem="{Binding HttpType}">
+        <DockPanel Grid.Row="0">
+            <ComboBox Style="{StaticResource FormValue_Style}" DockPanel.Dock="Left" Width="75" SelectedItem="{Binding HttpType}">
                 <sys:String>GET</sys:String>
                 <sys:String>POST</sys:String>
             </ComboBox>
-            <Button DockPanel.Dock="Right" Style="{StaticResource MiniBtn_Style}" Width="28" Height="26" Margin="5,0,0,0"
+            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}"
                     Command="{Binding ViewHttpHistoryCommand}" ToolTip="发送记录">
                 <Image Source="pack://application:,,,/AppManager2;component/Resources/icon/ToolForm/send_history.ico" Width="18" Height="18"/>
             </Button>
-            <Button DockPanel.Dock="Right" Style="{StaticResource MiniBtn_Style}" Width="28" Height="26" Margin="5,0,0,0"
+            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}"
                     Command="{Binding SaveHttpConfigCommand}" ToolTip="保存当前配置为发送记录">
                 <Image Source="pack://application:,,,/AppManager2;component/Resources/icon/ToolForm/save_http.ico" Width="18" Height="18"/>
             </Button>
-            <Button DockPanel.Dock="Right" Width="64" Margin="5,0,0,0"
+            <Button Style="{StaticResource Btn_Pri}" DockPanel.Dock="Right" Width="64"
                     Command="{Binding SendHttpRequestCommand}"
                     Content="{Binding SendButtonText}"/>
-            <TextBox Text="{Binding HttpUrl, UpdateSourceTrigger=PropertyChanged}" Margin="5 0 0 0" Padding="5 2"
+            <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding HttpUrl, UpdateSourceTrigger=PropertyChanged}"
                      VerticalContentAlignment="Center" Template="{StaticResource PlaceHolder}" Tag="请求地址，自动补http://"/>
         </DockPanel>
 
@@ -64,34 +57,32 @@
             <!-- Head参数区 -->
             <Border Grid.Row="0" BorderBrush="#ddd" BorderThickness="1" Background="#FAFAFA">
                 <DockPanel>
-                    <DockPanel DockPanel.Dock="Top" Margin="6,4,6,2" LastChildFill="False">
-                        <TextBlock Text="Head" VerticalAlignment="Center" Margin="0,0,12,0"/>
-                        <CheckBox Content="100-Continue" IsChecked="{Binding Expect100Continue}"
-                                  IsEnabled="{Binding IsPost}" VerticalAlignment="Center" Margin="0,0,12,0"
-                                  ToolTip="仅POST可用"/>
-                        <Button DockPanel.Dock="Right" Style="{StaticResource MiniBtn_Style}" Content="－" Margin="4,0,0,0"
+                    <DockPanel DockPanel.Dock="Top" LastChildFill="False">
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="Head" VerticalAlignment="Center"/>
+                        <CheckBox Style="{StaticResource FormValue_Style}" Content="100-Continue" IsChecked="{Binding Expect100Continue}" IsEnabled="{Binding IsPost}" ToolTip="仅POST可用"/>
+                        <Button Style="{StaticResource Btn_Danger}" DockPanel.Dock="Right" Content="－"
                                 Command="{Binding ClearAllHeaderCommand}" ToolTip="清空所有Head参数"/>
-                        <Button DockPanel.Dock="Right" Style="{StaticResource MiniBtn_Style}" Content="+"
+                        <Button Style="{StaticResource Btn_Pri}" DockPanel.Dock="Right" Content="+"
                                 Command="{Binding AddHeaderCommand}" ToolTip="添加Head参数"/>
                     </DockPanel>
-                    <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="6,0,6,6">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl ItemsSource="{Binding HeadParams}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
-                                    <Grid Margin="0,2">
+                                    <Grid>
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="3*" MinWidth="80"/>
                                             <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="7*" MinWidth="120"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBox Grid.Column="0" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="0" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalContentAlignment="Center" ToolTip="参数名"/>
-                                        <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" Width="4" Background="#ddd" Margin="2"
+                                        <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" Width="4" Background="#ddd"
                                                       ResizeBehavior="PreviousAndNext"/>
-                                        <TextBox Grid.Column="2" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="2" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalContentAlignment="Center" ToolTip="参数值"/>
-                                        <Button Grid.Column="3" Style="{StaticResource MiniBtn_Style}" Content="-" Margin="4,0,0,0"
+                                        <Button Grid.Column="3" Style="{StaticResource Btn_Danger}" Content="-"
                                                 Command="{Binding DataContext.DeleteHeaderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"/>
                                     </Grid>
@@ -107,98 +98,101 @@
 
             <!-- Form/Raw参数区 -->
             <Border Grid.Row="2" BorderBrush="#ddd" BorderThickness="1">
-                    <TabControl SelectedIndex="{Binding ParamModeIndex}" Background="Transparent" BorderThickness="0">
-                        <TabItem Header="Form">
-                            <DockPanel Margin="6">
-                                <DockPanel DockPanel.Dock="Top" Margin="0,2,0,4" LastChildFill="False">
-                                    <RadioButton Content="form-data" GroupName="FormContentType" Margin="0,0,12,0"
+                <TabControl SelectedIndex="{Binding ParamModeIndex}" Background="Transparent" BorderThickness="0">
+                    <TabItem Header="Form">
+                        <DockPanel>
+                            <DockPanel DockPanel.Dock="Top" LastChildFill="False">
+                                <RadioButton Style="{StaticResource FormValue_Style}" Content="form-data" GroupName="FormContentType"
                                                  IsChecked="{Binding FormIsFormData}"/>
-                                    <RadioButton Content="x-www-form-urlencoded" GroupName="FormContentType"
+                                <RadioButton Style="{StaticResource FormValue_Style}" Content="x-www-form-urlencoded" GroupName="FormContentType"
                                                  IsChecked="{Binding FormIsFormData, Converter={StaticResource InverseBoolConverter}}"/>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource MiniBtn_Style}" Content="－" Margin="4,0,0,0"
+                                <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="－"
                                             Command="{Binding ClearAllParamCommand}" ToolTip="清空所有参数"/>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource MiniBtn_Style}" Content="+"
+                                <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Pri}" Content="+"
                                             Command="{Binding AddParamCommand}" ToolTip="添加参数"/>
-                                </DockPanel>
-                                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                    <ItemsControl ItemsSource="{Binding FormParams}">
-                                        <ItemsControl.ItemTemplate>
-                                            <DataTemplate>
-                                                <Grid Margin="0,2">
-                                                    <Grid.ColumnDefinitions>
-                                                        <ColumnDefinition Width="60"/>
-                                                        <ColumnDefinition Width="3*" MinWidth="80"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="7*" MinWidth="120"/>
-                                                        <ColumnDefinition Width="Auto"/>
-                                                    </Grid.ColumnDefinitions>
-                                                    <ComboBox Grid.Column="0" SelectedItem="{Binding ParamType}" Margin="0,0,4,0"
-          ToolTip="text文本 / file文件（file时双击值选择文件）">
-                                                        <sys:String>text</sys:String>
-                                                        <sys:String>file</sys:String>
-                                                    </ComboBox>
-                                                    <TextBox Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                            </DockPanel>
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                                <ItemsControl ItemsSource="{Binding FormParams}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid>
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="60"/>
+                                                    <ColumnDefinition Width="3*" MinWidth="80"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="7*" MinWidth="120"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" Grid.Column="0" SelectedItem="{Binding ParamType}" ToolTip="text文本 / file文件（file时双击值选择文件）">
+                                                    <sys:String>text</sys:String>
+                                                    <sys:String>file</sys:String>
+                                                </ComboBox>
+                                                <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center" ToolTip="参数名"/>
-                                                    <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd" Margin="2"
+                                                <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd"
                                                       ResizeBehavior="PreviousAndNext"/>
-                                                    <TextBox Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center"
                                                              ToolTip="file类型双击选择文件">
-                                                        <TextBox.InputBindings>
-                                                            <MouseBinding Gesture="LeftDoubleClick"
+                                                    <TextBox.InputBindings>
+                                                        <MouseBinding Gesture="LeftDoubleClick"
                                                                           Command="{Binding DataContext.BrowseParamFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                           CommandParameter="{Binding}"/>
-                                                        </TextBox.InputBindings>
-                                                    </TextBox>
-                                                <Button Grid.Column="4" Style="{StaticResource MiniBtn_Style}" Content="-" Margin="4,0,0,0"
+                                                    </TextBox.InputBindings>
+                                                </TextBox>
+                                                <Button Grid.Column="4" Style="{StaticResource Btn_Danger}" Content="-"
                                                             Command="{Binding DataContext.DeleteParamCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             CommandParameter="{Binding}"/>
-                                                </Grid>
-                                            </DataTemplate>
-                                        </ItemsControl.ItemTemplate>
-                                    </ItemsControl>
-                                </ScrollViewer>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </DockPanel>
+                    </TabItem>
+                    <TabItem Header="Raw">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel Grid.Row="0" DockPanel.Dock="Left" LastChildFill="False">
+                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="类型:"/>
+                                <ComboBox Style="{StaticResource FormValue_Style}" Width="110" SelectedItem="{Binding RawType}"
+                                    ItemsSource="{x:Static vm:ToolPageViewModel.RawTypes}"/>
                             </DockPanel>
-                        </TabItem>
-                        <TabItem Header="Raw">
-                            <DockPanel Margin="6">
-                                <DockPanel DockPanel.Dock="Top" Margin="0,2,0,4">
-                                    <TextBlock Text="类型:" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                    <ComboBox Width="110" SelectedItem="{Binding RawType}"
-                                              ItemsSource="{x:Static vm:ToolPageViewModel.RawTypes}"/>
-                                </DockPanel>
-                                <TextBox Text="{Binding RawBody, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
-                                         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                         FontFamily="Consolas" FontSize="12"/>
-                            </DockPanel>
-                        </TabItem>
-                    </TabControl>
-                </Border>
+                            <TextBox Grid.Row="1" Text="{Binding RawBody, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
+         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+         FontFamily="Consolas" FontSize="12"/>
+                        </Grid>
+                    </TabItem>
+                </TabControl>
+            </Border>
 
             <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="#ddd"
                           ResizeBehavior="PreviousAndNext" DragCompleted="Splitter_DragCompleted" Margin="2"/>
 
             <!-- 响应区 -->
             <DockPanel Grid.Row="4">
-                <DockPanel DockPanel.Dock="Top" Margin="0,2,0,4" LastChildFill="False">
+                <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="5 0 5 0">
                     <TextBlock Text="响应" VerticalAlignment="Center"/>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource ButtonDanger_Style}" Content="清空"
+                    <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="清空"
                             Command="{Binding ClearResponseCommand}"/>
                 </DockPanel>
-                <TextBox Text="{Binding HttpResponse, Mode=OneWay}" IsReadOnly="True"
+                <TextBox Margin="2 5 2 0" Text="{Binding HttpResponse, Mode=OneWay}" IsReadOnly="True"
                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                          FontFamily="Consolas" FontSize="12" Background="White"/>
             </DockPanel>
         </Grid>
 
         <!-- 底部选项：超时 + 自动记录请求 -->
-        <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,6,0,0" Cursor="">
-            <CheckBox Content="超时" IsChecked="{Binding IsTimeoutEnabled}" VerticalAlignment="Center"
+        <StackPanel Grid.Row="2" Orientation="Horizontal" Cursor="">
+            <CheckBox Style="{StaticResource FormValue_Style}" Content="超时" IsChecked="{Binding IsTimeoutEnabled}" VerticalAlignment="Center"
                       Checked="TimeoutSetting_Changed" Unchecked="TimeoutSetting_Changed"/>
-            <TextBox Text="{Binding TimeoutText, UpdateSourceTrigger=PropertyChanged}" Width="50" Margin="5,0,0,0"
+            <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding TimeoutText, UpdateSourceTrigger=PropertyChanged}" Width="50"
                      VerticalContentAlignment="Center" LostFocus="TimeoutSetting_Changed"/>
-            <TextBlock Text="秒" VerticalAlignment="Center" Margin="4,0,0,0"/>
-            <CheckBox Content="记录请求配置" IsChecked="{Binding SaveHttpRequest}" VerticalAlignment="Center" Margin="16,0,0,0"
+            <TextBlock Style="{StaticResource FormLabel_Style}" Text="秒" VerticalAlignment="Center"/>
+            <CheckBox Style="{StaticResource FormValue_Style}" Content="记录请求配置" IsChecked="{Binding SaveHttpRequest}" VerticalAlignment="Center"
                       ToolTip="发送的请求自动保存到发送记录"
                       Checked="SaveHttpRequest_Changed" Unchecked="SaveHttpRequest_Changed"/>
         </StackPanel>

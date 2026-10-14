@@ -23,7 +23,7 @@
             <RowDefinition/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        <ScrollViewer Grid.Row="0" Padding="8" VerticalScrollBarVisibility="Auto">
+        <ScrollViewer Grid.Row="0" Padding="5" VerticalScrollBarVisibility="Auto">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -50,14 +50,14 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- 类型 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="类 型:" VerticalAlignment="Center"/>
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="类 型:"/>
                         <ComboBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1"
                           ItemsSource="{Binding AppTypes}"
                           SelectedItem="{Binding AppType}"
                           IsEnabled="{Binding IsEditMode}"
                           />
                         <!-- 分组 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="2" Text="分 组:" VerticalAlignment="Center"/>
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="2" Text="分 组:"/>
                         <ComboBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="3"
       ItemsSource="{Binding Groups}"
       Text="{Binding Group}"
@@ -65,7 +65,7 @@
       IsEnabled="{Binding IsEditMode}"
       />
                         <!-- 名称 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="0" Text="名 称:" VerticalAlignment="Center" Foreground="#DC3545">
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="0" Text="名 称:" Foreground="#DC3545">
                         </TextBlock>
                         <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3"
                          Text="{Binding AppTitle, UpdateSourceTrigger=PropertyChanged}"
@@ -92,13 +92,13 @@
                         </Grid.ColumnDefinitions>
 
                         <!-- 应用路径 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="路 径:" VerticalAlignment="Center" Foreground="#DC3545">
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="路 径:" Foreground="#DC3545">
                         </TextBlock>
                         <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1"
                          Text="{Binding AppPath, UpdateSourceTrigger=PropertyChanged}"
                          IsReadOnly="{Binding IsDetailMode}" Template="{StaticResource PlaceHolder}" Tag="jar、bat或exe的文件路径"/>
 
-                        <Button Style="{StaticResource ButtonInfo_Style}" Grid.Row="0" Grid.Column="2" Content="..."
+                        <Button Style="{StaticResource Btn_Info}" Grid.Row="0" Grid.Column="2" Content="..."
                         Command="{Binding BrowseAppPathCommand}"
                         IsEnabled="{Binding IsEditMode}"
                         />
@@ -117,7 +117,7 @@
                          Template="{StaticResource PlaceHolder}" Tag="bat类型用于终止的脚本路径">
 
                         </TextBox>
-                        <Button Style="{StaticResource ButtonInfo_Style}" Grid.Row="1" Grid.Column="2" Content="..."
+                        <Button Style="{StaticResource Btn_Info}" Grid.Row="1" Grid.Column="2" Content="..."
                         Command="{Binding BrowseStopPathCommand}"
                         IsEnabled="{Binding IsEditMode}"
                         />
@@ -129,7 +129,7 @@
                          IsReadOnly="{Binding IsDetailMode}"
                          Template="{StaticResource PlaceHolder}" Tag="jar包自定义的JDK路径"/>
 
-                        <Button Style="{StaticResource ButtonInfo_Style}" Grid.Row="2" Grid.Column="2" Content="..."
+                        <Button Style="{StaticResource Btn_Info}" Grid.Row="2" Grid.Column="2" Content="..."
                         Command="{Binding BrowseJdkPathCommand}"
                         IsEnabled="{Binding IsEditMode}"
                         />
@@ -206,7 +206,7 @@
 
                         <!-- JVM参数 -->
                         <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="配 置:" VerticalAlignment="Top"/>
-                        <Button Style="{StaticResource ButtonPrimary_Style}" Grid.Row="0" Grid.Column="1" Content="常用"
+                        <Button Style="{StaticResource Btn_Pri}" Grid.Row="0" Grid.Column="1" Content="常用"
                         Command="{Binding DefaultJvmCommand}"
                         IsEnabled="{Binding IsEditMode}"
                         VerticalAlignment="Top" FontSize="10"/>
@@ -220,7 +220,7 @@
                         <GridSplitter Margin="2 2 2 0" Grid.Row="1" Grid.Column="2" Height="5" HorizontalAlignment="Stretch" Background="#ddd"/>
                         <!-- 环境参数 -->
                         <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="2" Grid.Column="0" Text="参 数:" VerticalAlignment="Top"/>
-                        <Button Style="{StaticResource ButtonPrimary_Style}" Grid.Row="2" Grid.Column="1" Content="常用"
+                        <Button Style="{StaticResource Btn_Pri}" Grid.Row="2" Grid.Column="1" Content="常用"
                         Command="{Binding DefaultEnvCommand}"
                         IsEnabled="{Binding IsEditMode}"
                         VerticalAlignment="Top" FontSize="10"/>
@@ -295,9 +295,9 @@
                 <TextBlock Text="  " Foreground="Orange" FontSize="11"/>
                 <TextBlock Text="橙色必填其一" Foreground="Orange" FontSize="11"/>
             </StackPanel>
-            <Button DockPanel.Dock="Right" Style="{StaticResource ButtonInfo_Style}" Content="关闭" Width="80"
+            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}" Content="关闭" Width="80"
                 Command="{Binding CloseCommand}"/>
-            <Button DockPanel.Dock="Right" Style="{StaticResource ButtonSuccess_Style}" Content="保存" Width="80"
+            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Suc}" Content="保存" Width="80"
                 Command="{Binding SaveCommand}"
                 Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}"/>
 

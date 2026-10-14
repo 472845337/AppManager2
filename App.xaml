@@ -18,7 +18,8 @@
             <con:SplitRatioToGridLengthConverter x:Key="SplitRatioConverter"/>
             <con:AppTypeToColorConverter x:Key="AppTypeToColorConverter"/>
             <con:InverseBoolConverter x:Key="InverseBoolConverter"/>
-
+            <con:HalfConverter x:Key="HalfConverter"/>
+            
             <!-- 表单标题样式 -->
             <Style x:Key="FormLabel_Style" TargetType="TextBlock">
                 <Setter Property="VerticalAlignment" Value="Center" />

@@ -1,4 +1,3 @@
-using AppManager2.Config;
 using AppManager2.ViewModels;
 using System.Windows;
 

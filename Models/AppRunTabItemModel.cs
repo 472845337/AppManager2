@@ -1,7 +1,5 @@
-﻿using AppManager2.Config;
-using PropertyChanged;
+﻿using PropertyChanged;
 using System;
-using System.Collections.ObjectModel;
 using System.Text;
 
 namespace AppManager2.Models

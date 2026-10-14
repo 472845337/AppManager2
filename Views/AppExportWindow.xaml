@@ -19,23 +19,23 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <CheckBox Grid.Row="0" Content="全选" IsChecked="{Binding SelectAll}" Margin="0,0,0,10"/>
+        <CheckBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Content="全选" IsChecked="{Binding SelectAll}"/>
 
-        <Border Grid.Row="1" BorderBrush="#ccc" BorderThickness="1" Padding="5">
+        <Border Grid.Row="1" BorderBrush="#ccc" BorderThickness="1">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <ItemsControl ItemsSource="{Binding ExportApps}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked}" Margin="5,3"/>
+                            <CheckBox Style="{StaticResource FormValue_Style}" Content="{Binding Title}" IsChecked="{Binding IsChecked}"/>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
             </ScrollViewer>
         </Border>
 
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button Style="{StaticResource ButtonPrimary_Style}" Content="导出" Command="{Binding ExportCommand}" Width="70" Margin="2"/>
-            <Button Style="{StaticResource ButtonInfo_Style}" Content="刷新" Command="{Binding RefreshCommand}" Width="70" Margin="2"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Style="{StaticResource Btn_Pri}" Content="导出" Command="{Binding ExportCommand}" Width="60" Height="36"/>
+            <Button Style="{StaticResource Btn_Info}" Content="刷新" Command="{Binding RefreshCommand}" Width="60" Height="36"/>
         </StackPanel>
     </Grid>
 </Window>
