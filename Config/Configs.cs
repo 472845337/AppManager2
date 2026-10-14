@@ -54,6 +54,8 @@ namespace AppManager2.Config
         public const string IniKeyFormLocationX = "location_x";
         public const string IniKeyFormLocationY = "location_y";
         public const string IniKeyAppSplitRatio = "split_ratio";
+        // 项目树组的收缩状态（保存收缩组名单，|分隔）
+        public const string IniKeyAppTreeCollapsed = "tree_collapsed";
 
         // 工具页PostDog（对应老项目IniKeyTool*；分隔位置改按百分比存储，避免绝对像素在不同窗口尺寸下溢出）
         public const string IniKeyToolSplitPct = "split-pct";

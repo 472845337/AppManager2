@@ -22,7 +22,7 @@ namespace AppManager2.Services
 
         public List<AppRecord> GetAll()
         {
-            return SelectList();
+            return SelectList(null, null, "Sort", "ASC");
         }
 
         public AppRecord GetBySection(string section)

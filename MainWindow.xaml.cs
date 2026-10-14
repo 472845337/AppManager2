@@ -6,9 +6,11 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using IniParserUtils = global::Utils.IniParserUtils;
 
 namespace AppManager2 {
     public partial class MainWindow : Window {
@@ -23,7 +25,105 @@ namespace AppManager2 {
             InitializeComponent();
             RegisterEvents();
             InitNotifyIcon();
+            LoadWindowGeometry();
+            InitAutoRunPanel();
         }
+
+        #region 自启动列表（对应老项目AutoRunAppFlowLayoutPanel逐个添加CheckBox的方式，WPF用WrapPanel实现自动换行）
+
+        /// <summary>
+        /// 监听AutoRunItems集合变化，往WrapPanel中逐个添加自启动CheckBox
+        /// </summary>
+        private void InitAutoRunPanel() {
+            var items = ViewModel?.AutoRunItems;
+            if (items == null) return;
+            items.CollectionChanged += (s, e) => SyncAutoRunPanel();
+            SyncAutoRunPanel();
+        }
+
+        /// <summary>
+        /// 按当前集合内容重建面板中的CheckBox（IsChecked双向绑定到项，勾选联动入库由VM回调处理）
+        /// </summary>
+        private void SyncAutoRunPanel() {
+            AutoRunPanel.Children.Clear();
+            if (ViewModel == null) return;
+            foreach (var item in ViewModel.AutoRunItems) {
+                var checkBox = new CheckBox {
+                    Content = item.Title,
+                    Margin = new Thickness(5, 3, 0, 0),
+                    DataContext = item
+                };
+                checkBox.SetBinding(CheckBox.IsCheckedProperty, new Binding(nameof(Models.AutoRunItemModel.IsChecked)) { Mode = BindingMode.TwoWay });
+                AutoRunPanel.Children.Add(checkBox);
+            }
+        }
+
+        #endregion
+
+        #region 窗口位置与尺寸记忆（对应老项目InitMainForm窗口加载 + ControlUtils.SaveFormSize/SaveFormLocation）
+
+        private static string SystemIniPath => Configs.AppPath + "\\" + Configs.SystemIniPath;
+
+        /// <summary>
+        /// 从System.ini [system]读取上次的窗口位置和宽高；无记录时居中。
+        /// 位置超出虚拟屏幕时拉回可见范围（对应老项目InitMainForm的VirtualScreen修正）
+        /// </summary>
+        private void LoadWindowGeometry() {
+            var iniData = IniParserUtils.GetIniData(SystemIniPath);
+            var section = iniData[Configs.IniSectionSystem];
+            var heightStr = section[Configs.IniKeyFormHeight];
+            var widthStr = section[Configs.IniKeyFormWidth];
+            var xStr = section[Configs.IniKeyFormLocationX];
+            var yStr = section[Configs.IniKeyFormLocationY];
+
+            var heightOk = double.TryParse(heightStr, out var height);
+            var widthOk = double.TryParse(widthStr, out var width);
+            var xOk = double.TryParse(xStr, out var x);
+            var yOk = double.TryParse(yStr, out var y);
+            var hasSize = heightOk && widthOk;
+            var hasLocation = xOk && yOk;
+
+            if (hasSize && height > MinHeight && width > MinWidth) {
+                Height = height;
+                Width = width;
+            }
+
+            if (hasSize || hasLocation) {
+                if (!hasLocation) {
+                    // 只有尺寸记录时保持默认居中坐标
+                    WindowStartupLocation = WindowStartupLocation.CenterScreen;
+                    return;
+                }
+                // 位置超出虚拟屏幕时，调整位置（显示器拔掉/分辨率变化后窗口不至于丢在屏幕外）
+                var virtualLeft = SystemParameters.VirtualScreenLeft;
+                var virtualTop = SystemParameters.VirtualScreenTop;
+                var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
+                var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
+                if (x + ActualWidth > virtualRight) x = virtualRight - Width;
+                else if (x < virtualLeft) x = virtualLeft;
+                if (y + Height > virtualBottom) y = virtualBottom - Height;
+                else if (y < virtualTop) y = virtualTop;
+                WindowStartupLocation = WindowStartupLocation.Manual;
+                Left = x;
+                Top = y;
+            } else {
+                WindowStartupLocation = WindowStartupLocation.CenterScreen;
+            }
+        }
+
+        /// <summary>
+        /// 保存窗口位置和宽高到System.ini [system]（对应老项目ResizeEnd/FormClose保存）；
+        /// 最小化/最大化时不保存，避免记录中间态尺寸
+        /// </summary>
+        private void SaveWindowGeometry() {
+            if (WindowState != WindowState.Normal) return;
+            IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormHeight, Convert.ToInt32(ActualHeight).ToString());
+            IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormWidth, Convert.ToInt32(ActualWidth).ToString());
+            IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, Convert.ToInt32(Left).ToString());
+            IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, Convert.ToInt32(Top).ToString());
+        }
+
+        #endregion
 
         #region 托盘图标（对应老项目AppManagerNotifyIcon相关事件）
 
@@ -43,7 +143,8 @@ namespace AppManager2 {
 
         private static System.Drawing.Icon LoadNotifyIcon() {
             try {
-                var resource = Application.GetResourceStream(new Uri("pack://application:,,,/AppManager2;component/Resources/menu-icon/project.ico"));
+                // 老项目AppManagerNotifyIcon.Icon同款（从Form1.resx提取）
+                var resource = Application.GetResourceStream(new Uri("pack://application:,,,/AppManager2;component/Resources/icon/Window/notify.ico"));
                 if (resource != null) {
                     return new System.Drawing.Icon(resource.Stream);
                 }
@@ -128,6 +229,11 @@ namespace AppManager2 {
         /// 为最小化时，隐藏到托盘（通过托盘图标恢复或退出）
         /// </summary>
         protected override void OnClosing(CancelEventArgs e) {
+            // 所有关闭路径（退出/托盘退出/最小化隐藏）都记录当前窗口位置和尺寸
+            SaveWindowGeometry();
+            // 记录项目树组的展开/收缩状态，下次启动恢复
+            ViewModel?.SaveTreeExpandState();
+
             if (_reallyClose) {
                 base.OnClosing(e);
                 return;
@@ -179,8 +285,12 @@ namespace AppManager2 {
         }
 
         private void TreeView_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e) {
-            if (ViewModel != null && e.NewValue is TreeItemModel item) {
+            if (ViewModel == null) return;
+            if (e.NewValue is TreeItemModel item) {
                 ViewModel.SelectedApp = item;
+            } else if (e.NewValue == null) {
+                // 空白处取消选中后同步清除VM选中节点，联动刷新工具栏命令可用状态
+                ViewModel.SelectedApp = null;
             }
         }
 
@@ -188,6 +298,16 @@ namespace AppManager2 {
             if (ViewModel != null && sender is TabControl tabControl) {
                 ViewModel.SelectedTab = tabControl.SelectedItem as AppRunTabItemModel;
             }
+        }
+
+        /// <summary>
+        /// 主Tab切换后不把键盘焦点给新页面里的第一个输入框（如设置页的心跳字符）：
+        /// TabControl切换内容时会自动聚焦首个可聚焦控件，这里在切换完成后把焦点收回到TabControl自身。
+        /// SelectionChanged是冒泡事件，需按OriginalSource过滤，只处理主TabControl自身的切换
+        /// </summary>
+        private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (!ReferenceEquals(e.OriginalSource, MainTabControl)) return;
+            Dispatcher.BeginInvoke(new Action(() => Keyboard.Focus(MainTabControl)));
         }
 
         /// <summary>
@@ -201,6 +321,217 @@ namespace AppManager2 {
                 && !string.IsNullOrEmpty(node.Section)) {
                 ViewModel.SelectRunTab(node.Section);
             }
+        }
+
+        #region 项目树拖拽排序（对应老项目AppTreeView_ItemDrag/DragEnter/DragDrop + SortApp）
+
+        // 按下起点，移动超过阈值才发起拖拽（避免和普通单击冲突）
+        private Point _treeDragStart;
+        private bool _treeDragPending;
+
+        private void AppTreeView_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            var onNode = e.OriginalSource is DependencyObject src
+                && FindAncestor<TreeViewItem>(src) != null;
+            _treeDragPending = onNode;
+            _treeDragStart = e.GetPosition(AppTreeView);
+            if (onNode || FindAncestor<System.Windows.Controls.Primitives.ScrollBar>(e.OriginalSource as DependencyObject) != null) return;
+            // 点击树内空白区域（节点行以外、滚动条除外）取消选中：
+            // WPF点击空白处不会把键盘焦点从节点移到树上（失焦事件不触发），需手动清除选中并把焦点移到树
+            AppTreeView.Focus();
+            var selected = FindSelectedTreeViewItem(AppTreeView);
+            if (selected != null) {
+                selected.IsSelected = false;
+            }
+        }
+
+        private void AppTreeView_PreviewMouseMove(object sender, MouseEventArgs e) {
+            if (!_treeDragPending || e.LeftButton != MouseButtonState.Pressed) return;
+            var pos = e.GetPosition(AppTreeView);
+            if (Math.Abs(pos.X - _treeDragStart.X) < SystemParameters.MinimumHorizontalDragDistance
+                && Math.Abs(pos.Y - _treeDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+
+            _treeDragPending = false;
+            var treeViewItem = FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject);
+            if (treeViewItem?.DataContext is TreeItemModel node) {
+                DragDrop.DoDragDrop(AppTreeView, node, DragDropEffects.Move);
+            }
+        }
+
+        private void AppTreeView_DragOver(object sender, DragEventArgs e) {
+            e.Effects = e.Data.GetDataPresent(typeof(TreeItemModel)) ? DragDropEffects.Move : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void AppTreeView_Drop(object sender, DragEventArgs e) {
+            e.Handled = true;
+            if (!e.Data.GetDataPresent(typeof(TreeItemModel))) return;
+            var vm = ViewModel;
+            var moveNode = (TreeItemModel)e.Data.GetData(typeof(TreeItemModel));
+            if (vm == null || moveNode == null) return;
+
+            var isGroupMove = Configs.NodeFlagGroup.Equals(moveNode.Flag);
+            var targetItem = FindAncestor<TreeViewItem>(e.OriginalSource as DependencyObject);
+            var targetNode = targetItem?.DataContext as TreeItemModel;
+
+            // 拖动节点当前所在集合
+            var oldParent = FindNodeCollection(vm.AppTree, moveNode);
+
+            System.Collections.ObjectModel.ObservableCollection<TreeItemModel> targetParent;
+            int index;
+            string group;
+
+            if (targetNode == null) {
+                // 拖到树空白处：放到根级末尾（子节点清组）
+                targetParent = vm.AppTree;
+                index = vm.AppTree.Count;
+                group = string.Empty;
+            } else {
+                if (ReferenceEquals(targetNode, moveNode)) return;
+                var position = GetDropPosition(targetItem, e.GetPosition(targetItem));
+
+                if (Configs.NodeFlagGroup.Equals(targetNode.Flag) && !isGroupMove) {
+                    // 子节点拖到组节点：上1/3放组前、中间入组内末尾、下1/3放组后
+                    if (oldParent == targetNode.Children && position.atMiddle) {
+                        vm.ShowMessage("无效拖拽");
+                        return;
+                    }
+                    if (position.atTop) {
+                        targetParent = vm.AppTree;
+                        index = vm.AppTree.IndexOf(targetNode);
+                        group = string.Empty;
+                    } else if (position.atMiddle) {
+                        targetParent = targetNode.Children;
+                        index = targetNode.Children.Count;
+                        group = targetNode.GroupName;
+                    } else {
+                        targetParent = vm.AppTree;
+                        index = vm.AppTree.IndexOf(targetNode) + 1;
+                        group = string.Empty;
+                    }
+                } else {
+                    if (isGroupMove && Configs.NodeFlagChild.Equals(targetNode.Flag)) {
+                        vm.ShowMessage("无效拖拽，只允许一层目录");
+                        return;
+                    }
+                    // 拖到项目节点：与目标同级（目标在组内则入该组），上半区插目标前、下半区插目标后
+                    var targetGroupNode = FindNodeGroup(vm.AppTree, targetNode);
+                    if (targetGroupNode != null) {
+                        targetParent = targetGroupNode.Children;
+                        group = targetGroupNode.GroupName;
+                    } else {
+                        targetParent = vm.AppTree;
+                        group = string.Empty;
+                    }
+                    index = isUpIndex(targetParent, targetNode, position.isUp);
+                }
+            }
+
+            // 从原位置移除（同集合内移动时修正插入索引）
+            if (oldParent != null) {
+                var removedAt = oldParent.IndexOf(moveNode);
+                if (removedAt >= 0) {
+                    oldParent.RemoveAt(removedAt);
+                    if (oldParent == targetParent && removedAt < index) {
+                        index--;
+                    }
+                }
+            }
+            if (index < 0) index = 0;
+            if (index > targetParent.Count) index = targetParent.Count;
+            targetParent.Insert(index, moveNode);
+            if (!isGroupMove) {
+                moveNode.GroupName = group;
+            }
+
+            // 排序与分组写入数据库（Sort从1开始按树序重排）
+            vm.SaveTreeOrder();
+        }
+
+        private static int isUpIndex(System.Collections.ObjectModel.ObservableCollection<TreeItemModel> parent, TreeItemModel targetNode, bool isUp) {
+            var targetIndex = parent.IndexOf(targetNode);
+            return isUp ? targetIndex : targetIndex + 1;
+        }
+
+        /// <summary>
+        /// 落点在目标行内的位置：组节点用三段（上1/3/中/下1/3），项目节点用上下两半
+        /// （对应老项目按targetNode.Bounds计算locationStat/isUp）
+        /// </summary>
+        private static (bool isUp, bool atTop, bool atMiddle) GetDropPosition(TreeViewItem item, Point posInItem) {
+            // 用头部行高度计算（展开的组节点整高包含子级，不能用）
+            var header = item.Template?.FindName("PART_Header", item) as ContentPresenter;
+            double h, rel;
+            if (header != null && header.ActualHeight > 0) {
+                var origin = header.TranslatePoint(new Point(0, 0), item);
+                h = header.ActualHeight;
+                rel = posInItem.Y - origin.Y;
+            } else {
+                h = item.ActualHeight;
+                rel = posInItem.Y;
+            }
+            var isUp = rel >= 0 && rel < h / 2;
+            var atTop = rel >= 0 && rel < h / 3;
+            var atMiddle = rel >= h / 3 && rel < h * 2 / 3;
+            return (isUp, atTop, atMiddle);
+        }
+
+        /// <summary>查找节点所在的集合（根级返回根集合）</summary>
+        private static System.Collections.ObjectModel.ObservableCollection<TreeItemModel> FindNodeCollection(
+            System.Collections.ObjectModel.ObservableCollection<TreeItemModel> root, TreeItemModel node) {
+            foreach (var n in root) {
+                if (ReferenceEquals(n, node)) return root;
+                if (Configs.NodeFlagGroup.Equals(n.Flag)) {
+                    foreach (var c in n.Children) {
+                        if (ReferenceEquals(c, node)) return n.Children;
+                    }
+                }
+            }
+            return null;
+        }
+
+        /// <summary>查找节点所在的组节点（根级返回null）</summary>
+        private static TreeItemModel FindNodeGroup(
+            System.Collections.ObjectModel.ObservableCollection<TreeItemModel> root, TreeItemModel node) {
+            foreach (var n in root) {
+                if (Configs.NodeFlagGroup.Equals(n.Flag)) {
+                    foreach (var c in n.Children) {
+                        if (ReferenceEquals(c, node)) return n;
+                    }
+                }
+            }
+            return null;
+        }
+
+        #endregion
+
+        /// <summary>
+        /// 项目树键盘焦点变化时取消选中：
+        /// 焦点离开项目树（点击应用内其他控件），或焦点落在树的空白处（点击节点行以外区域，焦点移到TreeView自身），
+        /// 均视为“项目树失焦”取消选中；焦点移入/切换于节点之间、或被右键菜单临时接管时保留选中
+        /// </summary>
+        private void AppTreeView_KeyboardFocusChanged(object sender, KeyboardFocusChangedEventArgs e) {
+            // 新焦点仍是树内节点（节点间切换/移入）时保留选中
+            if (FindAncestor<TreeViewItem>(e.NewFocus as DependencyObject) != null) return;
+            // 右键菜单临时接管焦点（菜单命令仍以节点为操作对象），此时不取消选中
+            if (e.NewFocus is ContextMenu || e.NewFocus is MenuItem) return;
+            var selected = FindSelectedTreeViewItem(AppTreeView);
+            if (selected != null) {
+                selected.IsSelected = false;
+            }
+        }
+
+        /// <summary>
+        /// 递归查找当前处于选中状态的节点容器（TreeView.SelectedItem只读，需通过容器IsSelected清除选中）
+        /// </summary>
+        private static TreeViewItem FindSelectedTreeViewItem(ItemsControl itemsControl) {
+            if (itemsControl == null) return null;
+            foreach (var item in itemsControl.Items) {
+                if (itemsControl.ItemContainerGenerator.ContainerFromItem(item) is TreeViewItem container) {
+                    if (container.IsSelected) return container;
+                    var childSelected = FindSelectedTreeViewItem(container);
+                    if (childSelected != null) return childSelected;
+                }
+            }
+            return null;
         }
 
         private static T FindAncestor<T>(DependencyObject current) where T : DependencyObject {

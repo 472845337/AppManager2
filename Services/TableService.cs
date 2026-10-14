@@ -76,14 +76,17 @@ namespace AppManager2.Services
             return _dbHelper.Delete(GetTableName(), "id=@id", whereParams) > 0;
         }
 
-        public virtual List<T> SelectList(string where = null, SQLiteParameter[] whereParams = null)
+        public virtual List<T> SelectList(string where = null, SQLiteParameter[] whereParams = null, string orderBy = "id", string orderType = "desc")
         {
             string sql = "SELECT * FROM " + GetTableName();
             if (!string.IsNullOrEmpty(where))
             {
                 sql += " WHERE " + where;
             }
-            sql += " ORDER BY id DESC";
+            if (!string.IsNullOrEmpty(orderBy))
+            {
+                sql += " ORDER BY " + orderBy + " " + orderType;
+            }
 
             var ds = _dbHelper.ExecuteDataSet(sql, whereParams);
             if (ds == null || ds.Tables.Count == 0)

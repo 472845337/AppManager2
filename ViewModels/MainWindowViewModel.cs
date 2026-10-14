@@ -89,8 +89,11 @@ namespace AppManager2.ViewModels {
 
         private void OnAutoRunAllChanged() {
             if (_buildingAutoRun) return;
+            // 目标值必须先存局部变量：每勾一项，HandleAutoRunItemChanged会重算并回写
+            // AutoRunAll（“尚未全选”时改回false），若循环内直接读属性，第一项之后就全是false了
+            var checkAll = AutoRunAll;
             foreach (var item in AutoRunItems) {
-                item.IsChecked = AutoRunAll; // 勾选回调负责同步项目AutoRun并入库
+                item.IsChecked = checkAll; // 勾选回调负责同步项目AutoRun并入库
             }
         }
 
@@ -222,7 +225,7 @@ namespace AppManager2.ViewModels {
         /// 订阅运行/监控服务事件（事件可能在非UI线程触发，统一切换到UI线程处理）
         /// </summary>
         private void WireEvents() {
-            _appService.AppListChanged += () => RunOnUi(BuildTree);
+            _appService.AppListChanged += () => RunOnUi(SyncTree);
             _runService.LogReceived += (section, line) => RunOnUi(() => AppendTabLog(section, line));
             _monitorService.LogReceived += (section, line) => RunOnUi(() => AppendTabLog(section, line));
             _monitorService.RunStatChanged += (section, runStat, isRunning) => RunOnUi(() => UpdateRunStat(section, runStat, isRunning));
@@ -483,23 +486,18 @@ namespace AppManager2.ViewModels {
 
             var allApps = _appService.GetAllSectionDic();
             var groupList = _appService.GroupList ?? new List<string>();
+            var collapsedGroups = LoadCollapsedGroups();
+            // 按Sort排序（拖拽排序持久化后，启动按上次排定的顺序展示）
+            var orderedSections = _appService.GetAllSections()
+                .OrderBy(s => _appService.GetAppBySection(s)?.Sort ?? 0)
+                .ToList();
 
             foreach (var group in groupList) {
-                var groupNode = new TreeItemModel {
-                    Name = group,
-                    Flag = Configs.NodeFlagGroup,
-                    ImageKey = Configs.GroupNodeImageKey,
-                    Icon = GroupIcon,
-                    GroupName = group,
-                    StartCommand = GroupStartCommand,
-                    StopCommand = GroupStopCommand,
-                    DeleteCommand = GroupDeleteCommand,
-                    WarnOnCommand = GroupWarnOnCommand,
-                    WarnOffCommand = GroupWarnOffCommand,
-                    FreshCommand = GroupFreshCommand
-                };
+                var groupNode = CreateGroupNode(group);
+                // 恢复上次关闭前的收缩状态（名单外的组默认展开）
+                groupNode.IsExpanded = !collapsedGroups.Contains(group);
 
-                foreach (var section in _appService.GetAllSections()) {
+                foreach (var section in orderedSections) {
                     var app = _appService.GetAppBySection(section);
                     if (app != null && app.Group == group) {
                         groupNode.Children.Add(CreateChildNode(app, group));
@@ -510,7 +508,7 @@ namespace AppManager2.ViewModels {
             }
 
             // 添加未分组的应用
-            foreach (var section in _appService.GetAllSections()) {
+            foreach (var section in orderedSections) {
                 var app = _appService.GetAppBySection(section);
                 if (app != null && string.IsNullOrEmpty(app.Group)) {
                     AppTree.Add(CreateChildNode(app, null));
@@ -524,6 +522,206 @@ namespace AppManager2.ViewModels {
 
             // 同步设置页自启动列表（对应老项目InitProject中对AutoRunAppFlowLayoutPanel的维护）
             BuildAutoRunItems();
+        }
+
+        /// <summary>
+        /// 增量同步应用树（AppListChanged时调用）：已有节点实例保留（组的展开/收缩状态不丢），
+        /// 只新增/更新变化的节点、移除已删除的节点，不全量重建
+        /// </summary>
+        private void SyncTree() {
+            var dic = _appService.GetAllSectionDic();
+            var groupList = _appService.GroupList ?? new List<string>();
+
+            // 现有子节点索引：section → (节点, 所在集合)
+            var existIndex = new Dictionary<string, TreeItemModel>();
+            var parentIndex = new Dictionary<TreeItemModel, System.Collections.IList>();
+            foreach (var groupNode in AppTree) {
+                if (groupNode.Flag == Configs.NodeFlagGroup) {
+                    foreach (var child in groupNode.Children) {
+                        existIndex[child.Section] = child;
+                        parentIndex[child] = groupNode.Children;
+                    }
+                } else if (groupNode.Section != null) {
+                    existIndex[groupNode.Section] = groupNode;
+                    parentIndex[groupNode] = AppTree;
+                }
+            }
+
+            // 1. 移除已删除的section节点
+            foreach (var entry in existIndex.ToList()) {
+                if (!dic.ContainsKey(entry.Key)) {
+                    if (parentIndex[entry.Value] is ObservableCollection<TreeItemModel> parent) {
+                        parent.Remove(entry.Value);
+                    }
+                }
+            }
+
+            // 2. 移除已不在组集合中的组节点（清空场景；组内项目删空但组还在GroupList中时保留，与老版一致）
+            foreach (var groupNode in AppTree.ToList()) {
+                if (groupNode.Flag == Configs.NodeFlagGroup && !groupList.Contains(groupNode.GroupName)) {
+                    AppTree.Remove(groupNode);
+                }
+            }
+
+            // 3. 逐个更新/新增当前项目
+            foreach (var section in _appService.GetAllSections()) {
+                var app = _appService.GetAppBySection(section);
+                if (app == null) continue;
+
+                // 计算目标父集合（有组→组节点子级，无组→根）
+                ObservableCollection<TreeItemModel> targetParent;
+                TreeItemModel targetGroupNode = null;
+                if (string.IsNullOrEmpty(app.Group)) {
+                    targetParent = AppTree;
+                } else {
+                    targetGroupNode = AppTree.FirstOrDefault(n => n.Flag == Configs.NodeFlagGroup && n.GroupName == app.Group);
+                    if (targetGroupNode == null) {
+                        // 新组：创建组节点并追加（对应老项目Init2Tree中按需添加组节点）
+                        targetGroupNode = CreateGroupNode(app.Group);
+                        AppTree.Add(targetGroupNode);
+                    }
+                    targetParent = targetGroupNode.Children;
+                }
+
+                if (existIndex.TryGetValue(app.Section, out var node)) {
+                    // 已存在：原地更新属性；换组时搬移节点（保留节点实例，不影响其它组展开状态）
+                    UpdateChildNode(node, app);
+                    if (parentIndex[node] is ObservableCollection<TreeItemModel> oldParent && oldParent != targetParent) {
+                        oldParent.Remove(node);
+                        targetParent.Add(node);
+                    }
+                } else {
+                    // 新增：追加到目标集合末尾（对应老项目Init2Tree的添加位置）
+                    targetParent.Add(CreateChildNode(app, app.Group));
+                    // 新项目所在的组若处于收缩状态，展开该组让新项目可见；其它组保持不变
+                    if (targetGroupNode != null) {
+                        targetGroupNode.IsExpanded = true;
+                    }
+                }
+            }
+
+            // 刷新组节点聚合颜色
+            foreach (var group in groupList) {
+                UpdateGroupNodeColor(group);
+            }
+
+            // 同步设置页自启动列表
+            BuildAutoRunItems();
+        }
+
+        #region 项目树组展开/收缩状态记忆
+
+        /// <summary>
+        /// 读取上次关闭前处于收缩状态的组名单（System.ini [app] tree_collapsed，|分隔）
+        /// </summary>
+        private HashSet<string> LoadCollapsedGroups() {
+            var set = new HashSet<string>();
+            try {
+                var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
+                var collapsed = iniData[Configs.IniSectionApp][Configs.IniKeyAppTreeCollapsed];
+                if (!string.IsNullOrEmpty(collapsed)) {
+                    foreach (var name in collapsed.Split('|')) {
+                        if (!string.IsNullOrEmpty(name)) {
+                            set.Add(name);
+                        }
+                    }
+                }
+            } catch (Exception) {
+                // 读取失败按全部展开处理
+            }
+            return set;
+        }
+
+        /// <summary>
+        /// 保存当前收缩的组名单（关闭程序前由窗口调用）
+        /// </summary>
+        public void SaveTreeExpandState() {
+            try {
+                var collapsed = AppTree
+                    .Where(n => n.Flag == Configs.NodeFlagGroup && !n.IsExpanded && !string.IsNullOrEmpty(n.GroupName))
+                    .Select(n => n.GroupName)
+                    .ToList();
+                IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionApp,
+                    Configs.IniKeyAppTreeCollapsed, string.Join("|", collapsed));
+            } catch (Exception) {
+                // 保存失败不影响关闭流程
+            }
+        }
+
+        /// <summary>
+        /// 拖拽排序落定后按树序重排Sort并入库（对应老项目SortApp）：
+        /// 深度优先遍历所有项目，遍历序号从1开始连续编号；
+        /// 序号与项目当前Sort一致且分组未变化的项目跳过，只update实际变化的项目；
+        /// 直接写缓存和数据库，不触发AppListChanged，避免增量同步干扰手动排序结果
+        /// </summary>
+        public void SaveTreeOrder() {
+            try {
+                var sort = 1;
+                Walk(AppTree);
+                void Walk(IEnumerable<TreeItemModel> nodes) {
+                    foreach (var node in nodes) {
+                        if (Configs.NodeFlagGroup.Equals(node.Flag)) {
+                            Walk(node.Children);
+                            continue;
+                        }
+                        if (string.IsNullOrEmpty(node.Section)) continue;
+
+                        var app = _appService.GetAppBySection(node.Section);
+                        if (app == null) continue;
+
+                        var newGroup = node.GroupName ?? string.Empty;
+                        if (app.Sort == sort && string.Equals(app.Group ?? string.Empty, newGroup)) {
+                            // 序号与分组都没变，无需update
+                            sort++;
+                            continue;
+                        }
+
+                        app.Sort = sort++;
+                        app.Group = newGroup;
+                        _appService.UpdateAppSection(app.Section, app);
+
+                        var record = AppDbService.Instance.GetBySection(app.Section);
+                        if (record != null) {
+                            record.Sort = app.Sort;
+                            record.Group = app.Group;
+                            AppDbService.Instance.SaveApp(record);
+                        }
+                    }
+                }
+            } catch (Exception ex) {
+                MessageBox.Show($"排序保存失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        #endregion
+
+        private TreeItemModel CreateGroupNode(string group) {
+            return new TreeItemModel {
+                Name = group,
+                Flag = Configs.NodeFlagGroup,
+                ImageKey = Configs.GroupNodeImageKey,
+                Icon = GroupIcon,
+                GroupName = group,
+                StartCommand = GroupStartCommand,
+                StopCommand = GroupStopCommand,
+                DeleteCommand = GroupDeleteCommand,
+                WarnOnCommand = GroupWarnOnCommand,
+                WarnOffCommand = GroupWarnOffCommand,
+                FreshCommand = GroupFreshCommand
+            };
+        }
+
+        /// <summary>编辑后原地更新节点属性（不动节点实例，展开状态/选中不受影响）</summary>
+        private void UpdateChildNode(TreeItemModel node, AppSection app) {
+            node.Name = app.Title;
+            node.ImageKey = GetImageKey(app.Type);
+            node.Icon = GetNodeIcon(app);
+            node.GroupName = app.Group;
+            node.RunStat = app.RunStat;
+            node.IsRunning = app.IsRunning;
+            node.IsWarn = app.IsWarn;
+            node.Remark = app.Remark;
+            node.BackgroundBrush = GetStatBrush(app.RunStat);
         }
 
         private TreeItemModel CreateChildNode(AppSection app, string group) {

@@ -29,6 +29,8 @@
             <Style x:Key="FormValue_Style" TargetType="Control">
                 <Setter Property="VerticalContentAlignment" Value="Center" />
                 <Setter Property="Margin" Value="5 5 5 0" />
+                <Setter Property="Padding" Value="5 0"/>
+                <Setter Property="Height" Value="28"/>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

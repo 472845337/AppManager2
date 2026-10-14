@@ -21,6 +21,10 @@ namespace AppManager2.Models
         public bool IsRunning { get; set; }
         public bool IsWarn { get; set; }
         public string Remark { get; set; }
+
+        /// <summary>组节点展开状态（与TreeViewItem双向绑定，VM可在新增项目时定向展开目标组）</summary>
+        public bool IsExpanded { get; set; } = true;
+
         public ObservableCollection<TreeItemModel> Children { get; set; }
         public ICommand ContextMenuCommand { get; set; }
 

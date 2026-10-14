@@ -63,7 +63,6 @@ namespace AppManager2.ViewModels
         public RelayCommand BrowseJdkPathCommand { get; set; }
         public RelayCommand DefaultJvmCommand { get; set; }
         public RelayCommand DefaultEnvCommand { get; set; }
-        public RelayCommand DefaultExtCommand { get; set; }
 
         private readonly AppService _appService;
         private Window _window;
@@ -98,7 +97,6 @@ namespace AppManager2.ViewModels
             BrowseJdkPathCommand = new RelayCommand(OnBrowseJdkPath);
             DefaultJvmCommand = new RelayCommand(OnDefaultJvm);
             DefaultEnvCommand = new RelayCommand(OnDefaultEnv);
-            DefaultExtCommand = new RelayCommand(OnDefaultExt);
 
             LoadGroups();
         }
@@ -430,14 +428,6 @@ namespace AppManager2.ViewModels
                 }
             }
             EnvParams = current;
-        }
-
-        private void OnDefaultExt(object obj)
-        {
-            // 扩展脚本的默认配置
-            var current = ExtScript ?? string.Empty;
-            // 可以添加一些常用的扩展脚本
-            ExtScript = current;
         }
 
         public AppSection ToAppSection()

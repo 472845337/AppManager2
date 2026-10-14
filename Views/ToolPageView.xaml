@@ -87,7 +87,8 @@
                                         </Grid.ColumnDefinitions>
                                         <TextBox Grid.Column="0" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalContentAlignment="Center" ToolTip="参数名"/>
-                                        <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" Width="4" Background="#ddd" Margin="2"/>
+                                        <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" Width="4" Background="#ddd" Margin="2"
+                                                      ResizeBehavior="PreviousAndNext"/>
                                         <TextBox Grid.Column="2" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                  VerticalContentAlignment="Center" ToolTip="参数值"/>
                                         <Button Grid.Column="3" Style="{StaticResource MiniBtn_Style}" Content="-" Margin="4,0,0,0"
@@ -126,9 +127,9 @@
                                                 <Grid Margin="0,2">
                                                     <Grid.ColumnDefinitions>
                                                         <ColumnDefinition Width="60"/>
-                                                        <ColumnDefinition Width="3*"/>
+                                                        <ColumnDefinition Width="3*" MinWidth="80"/>
                                                         <ColumnDefinition Width="Auto"/>
-                                                        <ColumnDefinition Width="7*"/>
+                                                        <ColumnDefinition Width="7*" MinWidth="120"/>
                                                         <ColumnDefinition Width="Auto"/>
                                                     </Grid.ColumnDefinitions>
                                                     <ComboBox Grid.Column="0" SelectedItem="{Binding ParamType}" Margin="0,0,4,0"
@@ -138,7 +139,8 @@
                                                     </ComboBox>
                                                     <TextBox Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center" ToolTip="参数名"/>
-                                                    <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd" Margin="2"/>
+                                                    <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd" Margin="2"
+                                                      ResizeBehavior="PreviousAndNext"/>
                                                     <TextBox Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center"
                                                              ToolTip="file类型双击选择文件">
