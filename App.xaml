@@ -1,0 +1,35 @@
+﻿<Application x:Class="AppManager2.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:con="clr-namespace:AppManager2.Converters"
+             StartupUri="MainWindow.xaml">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/AppManager2;component/Resources/Style/Buttons.xaml"/>
+                <ResourceDictionary Source="/AppManager2;component/Resources/Style/TextBoxPlaceHolder.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            
+            <!-- 转换器资源 -->
+            <con:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+            <con:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+            <con:RunStatToColorConverter x:Key="RunStatToColorConverter" />
+            <con:RunStatToTextConverter x:Key="RunStatToTextConverter" />
+            <con:SplitRatioToGridLengthConverter x:Key="SplitRatioConverter"/>
+            <con:AppTypeToColorConverter x:Key="AppTypeToColorConverter"/>
+            <con:InverseBoolConverter x:Key="InverseBoolConverter"/>
+
+            <!-- 表单标题样式 -->
+            <Style x:Key="FormLabel_Style" TargetType="TextBlock">
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="HorizontalAlignment" Value="Right" />
+                <Setter Property="Margin" Value="5 5 5 0" />
+            </Style>
+            <!-- 表单值样式 -->
+            <Style x:Key="FormValue_Style" TargetType="Control">
+                <Setter Property="VerticalContentAlignment" Value="Center" />
+                <Setter Property="Margin" Value="5 5 5 0" />
+            </Style>
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>

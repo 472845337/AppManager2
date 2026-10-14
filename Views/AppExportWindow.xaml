@@ -1,0 +1,40 @@
+﻿<Window x:Class="AppManager2.Views.AppExportWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:vm="clr-namespace:AppManager2.ViewModels"
+        mc:Ignorable="d"
+        Title="导出应用配置" Height="450" Width="360"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanMinimize">
+    <Window.DataContext>
+        <vm:AppExportViewModel/>
+    </Window.DataContext>
+    <Grid Margin="15">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <CheckBox Grid.Row="0" Content="全选" IsChecked="{Binding SelectAll}" Margin="0,0,0,10"/>
+
+        <Border Grid.Row="1" BorderBrush="#ccc" BorderThickness="1" Padding="5">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl ItemsSource="{Binding ExportApps}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <CheckBox Content="{Binding Title}" IsChecked="{Binding IsChecked}" Margin="5,3"/>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
+            <Button Style="{StaticResource ButtonPrimary_Style}" Content="导出" Command="{Binding ExportCommand}" Width="70" Margin="2"/>
+            <Button Style="{StaticResource ButtonInfo_Style}" Content="刷新" Command="{Binding RefreshCommand}" Width="70" Margin="2"/>
+        </StackPanel>
+    </Grid>
+</Window>
