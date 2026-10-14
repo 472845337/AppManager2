@@ -219,7 +219,6 @@ namespace AppManager2.Services
                 }
 
                 var process = new Process { StartInfo = processStartInfo, EnableRaisingEvents = true };
-                process.EnableRaisingEvents = true;
 
                 if (trackProcess)
                 {
