@@ -8,7 +8,7 @@
         Title="导出应用配置" Height="450" Width="360"
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/appexport.ico"
         WindowStartupLocation="CenterOwner"
-        ResizeMode="CanMinimize">
+        ResizeMode="CanResizeWithGrip">
     <Window.DataContext>
         <vm:AppExportViewModel/>
     </Window.DataContext>

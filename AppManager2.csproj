@@ -211,7 +211,6 @@
   </ItemGroup>
   <ItemGroup>
     <Resource Include="Resources\icon\AppForm\cmd.ico" />
-    <Resource Include="Resources\icon\AppForm\copy.ico" />
     <Resource Include="Resources\icon\AppForm\exe.ico" />
     <Resource Include="Resources\icon\AppForm\Export.ico" />
     <Resource Include="Resources\icon\AppForm\group.ico" />
@@ -219,10 +218,6 @@
     <Resource Include="Resources\icon\AppForm\java.ico" />
     <Resource Include="Resources\icon\AppRightMenu\File.ico" />
     <Resource Include="Resources\icon\Base\Clear.ico" />
-    <Resource Include="Resources\icon\Base\Fresh.ico" />
-    <Resource Include="Resources\icon\Base\remove.ico" />
-    <Resource Include="Resources\icon\HttpSend\Deduplicate.ico" />
-    <Resource Include="Resources\icon\HttpSend\SendAgain.ico" />
     <Resource Include="Resources\icon\ToolForm\save_http.ico" />
     <Resource Include="Resources\icon\ToolForm\send_history.ico" />
     <Resource Include="Resources\menu-icon\add.ico" />
@@ -231,16 +226,11 @@
     <Resource Include="Resources\menu-icon\edit.ico" />
     <Resource Include="Resources\menu-icon\expand.ico" />
     <Resource Include="Resources\menu-icon\fresh.ico" />
-    <Resource Include="Resources\menu-icon\project.ico" />
     <Resource Include="Resources\menu-icon\remove.ico" />
-    <Resource Include="Resources\menu-icon\save_http.ico" />
-    <Resource Include="Resources\menu-icon\send_history.ico" />
     <Resource Include="Resources\menu-icon\start.ico" />
     <Resource Include="Resources\menu-icon\stop.ico" />
     <Resource Include="Resources\menu-icon\warn-off.ico" />
     <Resource Include="Resources\menu-icon\warn-on.ico" />
-    <Resource Include="Resources\png\list_add.png" />
-    <Resource Include="Resources\png\list_subtract.png" />
     <Content Include="System.Data.SQLite.dll" />
     <Content Include="X64\SQLite.Interop.dll">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

@@ -8,7 +8,7 @@
         Title="发送记录" Height="500" Width="800" MinHeight="300" MinWidth="500"
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/httpsend.ico"
         WindowStartupLocation="Manual"
-        SourceInitialized="Window_SourceInitialized">
+        SourceInitialized="Window_SourceInitialized" ResizeMode="CanResizeWithGrip">
     <Window.DataContext>
         <vm:HttpSendFormViewModel/>
     </Window.DataContext>

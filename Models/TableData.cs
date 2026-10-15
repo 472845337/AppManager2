@@ -4,7 +4,7 @@ namespace AppManager2.Models
 {
     public abstract class TableData
     {
-        [TableParam(true, "id", "INTEGER")]
+        [TableParam("id", "INTEGER", true)]
         public long? Id { get; set; }
 
         [TableParam("create_time", "VARCHAR")]

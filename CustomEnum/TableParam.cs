@@ -15,12 +15,5 @@ namespace AppManager2.CustomEnum
             Type = type;
             IsPrimaryKey = isPrimaryKey;
         }
-
-        public TableParam(bool isPrimaryKey, string name, string type)
-        {
-            IsPrimaryKey = isPrimaryKey;
-            Name = name;
-            Type = type;
-        }
     }
 }
