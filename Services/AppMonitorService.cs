@@ -3,6 +3,8 @@ using AppManager2.Models;
 using Newtonsoft.Json;
 using System;
 using System.Diagnostics;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Utils;
 
@@ -34,7 +36,12 @@ namespace AppManager2.Services
         /// <summary>自启动请求（初始化监控时应用未运行且配置了AutoRun）</summary>
         public event Action<AppSection> StartRequested;
 
-        private AppMonitorService() { }
+        private AppMonitorService()
+        {
+            // 订阅只做一次，避免 Start 被多次调用时重复触发监控
+            _monitorTimer.AutoReset = true;
+            _monitorTimer.Elapsed += (sender, e) => MonitorAll();
+        }
 
         /// <summary>
         /// 加载环境配置（对应老项目 InitEnv 中监控相关的部分）
@@ -69,9 +76,8 @@ namespace AppManager2.Services
         /// </summary>
         public void Start()
         {
-            _monitorTimer.Interval = Configs.MonitorInterval;
-            _monitorTimer.AutoReset = true;
-            _monitorTimer.Elapsed += (sender, e) => MonitorAll();
+            // MonitorInterval 单位为秒，需转换为毫秒（漏乘会导致定时器以毫秒级间隔高频触发）
+            _monitorTimer.Interval = Configs.MonitorInterval * 1000;
             _monitorTimer.Enabled = true;
         }
 
@@ -94,14 +100,29 @@ namespace AppManager2.Services
             }
         }
 
+        private int _monitoring;
+
         private void MonitorAll()
         {
-            var sections = _appService.GetAllSections();
-            if (sections == null) return;
-            foreach (var section in sections)
+            // 防重入：一轮检测最坏耗时约 2×MonitorTimeout 秒（心跳POST+GET都超时），
+            // 上一轮未结束时跳过本轮，避免监控任务堆积拖垮线程池
+            if (Interlocked.CompareExchange(ref _monitoring, 1, 0) != 0) return;
+            Task.Run(async () =>
             {
-                MonitorApp(_appService.GetAppBySection(section), false);
-            }
+                try
+                {
+                    var sections = _appService.GetAllSections();
+                    if (sections == null) return;
+                    var tasks = sections
+                        .Select(section => MonitorAppAsync(_appService.GetAppBySection(section), false))
+                        .ToArray();
+                    await Task.WhenAll(tasks);
+                }
+                finally
+                {
+                    Volatile.Write(ref _monitoring, 0);
+                }
+            });
         }
 
         /// <summary>
@@ -112,8 +133,13 @@ namespace AppManager2.Services
         /// <param name="appInit">是否应用初始化监控（应用启动/程序启动时传true，会触发AutoRun）</param>
         public void MonitorApp(AppSection app, bool appInit)
         {
-            if (app == null) return;
-            Task.Run(() =>
+            MonitorAppAsync(app, appInit);
+        }
+
+        private Task MonitorAppAsync(AppSection app, bool appInit)
+        {
+            if (app == null) return Task.CompletedTask;
+            return Task.Run(() =>
             {
                 try
                 {

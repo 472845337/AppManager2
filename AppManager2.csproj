@@ -124,7 +124,6 @@
     <Compile Include="ViewModels\BaseViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\AppPageViewModel.cs" />
-    <Compile Include="ViewModels\SetPageViewModel.cs" />
     <Compile Include="ViewModels\ToolPageViewModel.cs" />
     <Compile Include="ViewModels\AppFormViewModel.cs" />
     <Compile Include="ViewModels\HttpSendFormViewModel.cs" />

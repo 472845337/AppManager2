@@ -121,12 +121,12 @@
                                                 <sys:String>file</sys:String>
                                             </ComboBox>
                                             <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
-                                                             VerticalContentAlignment="Center" ToolTip="参数名"/>
+                                                             VerticalContentAlignment="Center" ToolTip="参数名" Template="{StaticResource PlaceHolder}" Tag="Key"/>
                                             <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd"
                                                       ResizeBehavior="PreviousAndNext"/>
                                             <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center"
-                                                             ToolTip="file类型双击选择文件">
+                                                             ToolTip="file类型双击选择文件" Template="{StaticResource PlaceHolder}" Tag="Value">
                                                 <TextBox.InputBindings>
                                                     <MouseBinding Gesture="LeftDoubleClick"
                                                                           Command="{Binding DataContext.BrowseParamFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
