@@ -211,7 +211,7 @@ namespace AppManager2.ViewModels
         {
             var sb = new StringBuilder();
             sb.Append(httpSend.Url).Append("#").Append(httpSend.Type);
-            if (!HttpUtils.TypePost.Equals(httpSend.Type)) return sb.ToString();
+            if (!HttpUtils.HasRequestBody(httpSend.Type)) return sb.ToString();
             // 判断参数，form-data,form-urlencoded,raw
             var paramSb = new StringBuilder();
             paramSb.Append(httpSend.ContentType);

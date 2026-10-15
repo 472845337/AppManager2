@@ -22,10 +22,8 @@
 
         <!-- URL行：类型/地址/发送/保存/历史（保存/历史对应老项目SaveHttpButton/SendHistoryButton的纯图标按钮） -->
         <DockPanel Grid.Row="0">
-            <ComboBox Style="{StaticResource FormValue_Style}" DockPanel.Dock="Left" Width="75" SelectedItem="{Binding HttpType}">
-                <sys:String>GET</sys:String>
-                <sys:String>POST</sys:String>
-            </ComboBox>
+            <ComboBox Style="{StaticResource FormValue_Style}" DockPanel.Dock="Left" Width="Auto" MinWidth="80" SelectedItem="{Binding HttpType}"
+                      ItemsSource="{x:Static vm:ToolPageViewModel.HttpTypes}"/>
             <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}"
                     Command="{Binding ViewHttpHistoryCommand}" ToolTip="发送记录">
                 <Image Source="pack://application:,,,/AppManager2;component/Resources/icon/ToolForm/send_history.ico" Width="18" Height="18"/>
@@ -43,7 +41,7 @@
 
         <!-- 两个分隔器放在同一Grid（5行）：PreviousAndNext只重排相邻两行的空间、其余行像素高度保持不变，
              因此拖动任一分隔器都不会带动另一个分隔器位移 -->
-        <Grid Grid.Row="1">
+        <Grid Grid.Row="1" Margin="5">
             <Grid.RowDefinitions>
                 <!-- Head区占比记忆（默认40%，ini [tool] split-pct-head）；星号比例随父窗口缩放，避免固定像素溢出 -->
                 <RowDefinition x:Name="HeadRow" Height="40*" MinHeight="70"/>
@@ -55,35 +53,31 @@
             </Grid.RowDefinitions>
 
             <!-- Head参数区 -->
-            <Border Grid.Row="0" BorderBrush="#ddd" BorderThickness="1" Background="#FAFAFA">
+            <Border Grid.Row="0" BorderBrush="#ddd" BorderThickness="1">
                 <DockPanel>
-                    <DockPanel DockPanel.Dock="Top" LastChildFill="False">
+                    <DockPanel DockPanel.Dock="Top" LastChildFill="False" Background="#FAFAFA">
                         <TextBlock Style="{StaticResource FormLabel_Style}" Text="Head" VerticalAlignment="Center"/>
                         <CheckBox Style="{StaticResource FormValue_Style}" Content="100-Continue" IsChecked="{Binding Expect100Continue}" IsEnabled="{Binding IsPost}" ToolTip="仅POST可用"/>
-                        <Button Style="{StaticResource Btn_Danger}" DockPanel.Dock="Right" Content="－"
-                                Command="{Binding ClearAllHeaderCommand}" ToolTip="清空所有Head参数"/>
-                        <Button Style="{StaticResource Btn_Pri}" DockPanel.Dock="Right" Content="+"
-                                Command="{Binding AddHeaderCommand}" ToolTip="添加Head参数"/>
+                        <Button Style="{StaticResource Btn_Danger}" DockPanel.Dock="Right" Content="－" Command="{Binding ClearAllHeaderCommand}" ToolTip="清空所有Head参数"/>
+                        <Button Style="{StaticResource Btn_Pri}" DockPanel.Dock="Right" Content="+" Command="{Binding AddHeaderCommand}" ToolTip="添加Head参数"/>
                     </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
-                        <ItemsControl ItemsSource="{Binding HeadParams}">
+                        <ItemsControl Margin="5" Padding="0 0 5 5" ItemsSource="{Binding HeadParams}" BorderThickness="1" BorderBrush="#ddd">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate>
                                     <Grid>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="3*" MinWidth="80"/>
+                                            <ColumnDefinition Width="2*" MinWidth="80"/>
                                             <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="7*" MinWidth="120"/>
+                                            <ColumnDefinition Width="8*" MinWidth="120"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="0" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
-                                                 VerticalContentAlignment="Center" ToolTip="参数名"/>
-                                        <GridSplitter Grid.Column="1" VerticalAlignment="Stretch" Width="4" Background="#ddd"
-                                                      ResizeBehavior="PreviousAndNext"/>
+                                                 VerticalContentAlignment="Center" ToolTip="参数名" Template="{StaticResource PlaceHolder}" Tag="Key"/>
+                                        <GridSplitter Margin="0 5 0 0" Grid.Column="1" VerticalAlignment="Stretch" Width="4" Background="#ddd" ResizeBehavior="PreviousAndNext"/>
                                         <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="2" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                                 VerticalContentAlignment="Center" ToolTip="参数值"/>
-                                        <Button Grid.Column="3" Style="{StaticResource Btn_Danger}" Content="-"
-                                                Command="{Binding DataContext.DeleteHeaderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                 VerticalContentAlignment="Center" ToolTip="参数值" Template="{StaticResource PlaceHolder}" Tag="Value"/>
+                                        <Button Grid.Column="3" Style="{StaticResource Btn_Danger}" Content="-" Command="{Binding DataContext.DeleteHeaderCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                 CommandParameter="{Binding}"/>
                                     </Grid>
                                 </DataTemplate>
@@ -97,91 +91,88 @@
                           ResizeBehavior="PreviousAndNext" DragCompleted="Splitter_DragCompleted" Margin="2"/>
 
             <!-- Form/Raw参数区 -->
-            <Border Grid.Row="2" BorderBrush="#ddd" BorderThickness="1">
-                <TabControl SelectedIndex="{Binding ParamModeIndex}" Background="Transparent" BorderThickness="0">
-                    <TabItem Header="Form">
-                        <DockPanel>
-                            <DockPanel DockPanel.Dock="Top" LastChildFill="False">
-                                <RadioButton Style="{StaticResource FormValue_Style}" Content="form-data" GroupName="FormContentType"
+            <TabControl Grid.Row="2" SelectedIndex="{Binding ParamModeIndex}" Background="Transparent" BorderThickness="1" BorderBrush="#ddd">
+                <TabItem Header="Form">
+                    <DockPanel>
+                        <DockPanel DockPanel.Dock="Top" LastChildFill="False">
+                            <RadioButton Style="{StaticResource FormValue_Style}" Content="form-data" GroupName="FormContentType"
                                                  IsChecked="{Binding FormIsFormData}"/>
-                                <RadioButton Style="{StaticResource FormValue_Style}" Content="x-www-form-urlencoded" GroupName="FormContentType"
+                            <RadioButton Style="{StaticResource FormValue_Style}" Content="x-www-form-urlencoded" GroupName="FormContentType"
                                                  IsChecked="{Binding FormIsFormData, Converter={StaticResource InverseBoolConverter}}"/>
-                                <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="－"
+                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="－"
                                             Command="{Binding ClearAllParamCommand}" ToolTip="清空所有参数"/>
-                                <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Pri}" Content="+"
+                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Pri}" Content="+"
                                             Command="{Binding AddParamCommand}" ToolTip="添加参数"/>
-                            </DockPanel>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                                <ItemsControl ItemsSource="{Binding FormParams}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid>
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="60"/>
-                                                    <ColumnDefinition Width="3*" MinWidth="80"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                    <ColumnDefinition Width="7*" MinWidth="120"/>
-                                                    <ColumnDefinition Width="Auto"/>
-                                                </Grid.ColumnDefinitions>
-                                                <ComboBox Style="{StaticResource FormValue_Style}" Grid.Column="0" SelectedItem="{Binding ParamType}" ToolTip="text文本 / file文件（file时双击值选择文件）">
-                                                    <sys:String>text</sys:String>
-                                                    <sys:String>file</sys:String>
-                                                </ComboBox>
-                                                <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
+                        </DockPanel>
+                        <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <ItemsControl Margin="5" Padding="0 0 5 5" ItemsSource="{Binding FormParams}" BorderBrush="#ddd" BorderThickness="1">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="70"/>
+                                                <ColumnDefinition Width="2*" MinWidth="80"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="8*" MinWidth="120"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Grid.Column="0" SelectedItem="{Binding ParamType}" ToolTip="text文本 / file文件（file时双击值选择文件）">
+                                                <sys:String>text</sys:String>
+                                                <sys:String>file</sys:String>
+                                            </ComboBox>
+                                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center" ToolTip="参数名"/>
-                                                <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd"
+                                            <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd"
                                                       ResizeBehavior="PreviousAndNext"/>
-                                                <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center"
                                                              ToolTip="file类型双击选择文件">
-                                                    <TextBox.InputBindings>
-                                                        <MouseBinding Gesture="LeftDoubleClick"
+                                                <TextBox.InputBindings>
+                                                    <MouseBinding Gesture="LeftDoubleClick"
                                                                           Command="{Binding DataContext.BrowseParamFileCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                                           CommandParameter="{Binding}"/>
-                                                    </TextBox.InputBindings>
-                                                </TextBox>
-                                                <Button Grid.Column="4" Style="{StaticResource Btn_Danger}" Content="-"
+                                                </TextBox.InputBindings>
+                                            </TextBox>
+                                            <Button Grid.Column="4" Style="{StaticResource Btn_Danger}" Content="-"
                                                             Command="{Binding DataContext.DeleteParamCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                             CommandParameter="{Binding}"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </DockPanel>
-                    </TabItem>
-                    <TabItem Header="Raw">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="*"/>
-                            </Grid.RowDefinitions>
-                            <DockPanel Grid.Row="0" DockPanel.Dock="Left" LastChildFill="False">
-                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="类型:"/>
-                                <ComboBox Style="{StaticResource FormValue_Style}" Width="110" SelectedItem="{Binding RawType}"
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                    </DockPanel>
+                </TabItem>
+                <TabItem Header="Raw">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        <DockPanel Grid.Row="0" DockPanel.Dock="Left" LastChildFill="False">
+                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="类型:"/>
+                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110" SelectedItem="{Binding RawType}"
                                     ItemsSource="{x:Static vm:ToolPageViewModel.RawTypes}"/>
-                            </DockPanel>
-                            <TextBox Grid.Row="1" Text="{Binding RawBody, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
-         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-         FontFamily="Consolas" FontSize="12"/>
-                        </Grid>
-                    </TabItem>
-                </TabControl>
-            </Border>
+                        </DockPanel>
+                        <TextBox Margin="5" Padding="5" Grid.Row="1" Text="{Binding RawBody, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
+         VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontSize="15"/>
+                    </Grid>
+                </TabItem>
+            </TabControl>
 
             <GridSplitter Grid.Row="3" Height="4" HorizontalAlignment="Stretch" Background="#ddd"
                           ResizeBehavior="PreviousAndNext" DragCompleted="Splitter_DragCompleted" Margin="2"/>
 
             <!-- 响应区 -->
             <DockPanel Grid.Row="4">
-                <DockPanel DockPanel.Dock="Top" LastChildFill="False" Margin="5 0 5 0">
-                    <TextBlock Text="响应" VerticalAlignment="Center"/>
-                    <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="清空"
+                <DockPanel DockPanel.Dock="Top" LastChildFill="False" Background="#FAFAFA">
+                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="响应" VerticalAlignment="Center"/>
+                    <Button DockPanel.Dock="Right" Margin="0 2 0 2" Style="{StaticResource Btn_Danger}" Content="清空"
                             Command="{Binding ClearResponseCommand}"/>
                 </DockPanel>
-                <TextBox Margin="2 5 2 0" Text="{Binding HttpResponse, Mode=OneWay}" IsReadOnly="True"
+                <TextBox Text="{Binding HttpResponse, Mode=OneWay}" IsReadOnly="True"
                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                         FontFamily="Consolas" FontSize="12" Background="White"/>
+                         FontFamily="Consolas" FontSize="12" Background="Black" Foreground="White"/>
             </DockPanel>
         </Grid>
 

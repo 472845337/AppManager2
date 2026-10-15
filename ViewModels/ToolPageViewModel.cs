@@ -28,13 +28,20 @@ namespace AppManager2.ViewModels
         /// <summary>raw参数类型下拉选项（与老项目RawTypeEnum枚举名一致）</summary>
         public static readonly string[] RawTypes = { "Text", "JavaScript", "Json", "Html", "Xml" };
 
+        /// <summary>请求方式下拉选项（常量取自HttpUtils，历史记录Type回填时可直接匹配）</summary>
+        public static readonly string[] HttpTypes =
+        {
+            HttpUtils.TypeGet, HttpUtils.TypePost, HttpUtils.TypePut, HttpUtils.TypePatch,
+            HttpUtils.TypeDelete, HttpUtils.TypeHead, HttpUtils.TypeOptions
+        };
+
         public string HttpUrl { get; set; }
 
         [OnChangedMethod(nameof(OnHttpTypeChanged))]
         public string HttpType { get; set; } = HttpUtils.TypeGet;
 
-        /// <summary>是否POST请求（决定Expect100Continue等控件可用性，由HttpType变化联动）</summary>
-        public bool IsPost { get; private set; }
+        /// <summary>是否可携带请求体的方式（决定Expect100Continue/Form参数等控件可用性，由HttpType变化联动）</summary>
+        public bool HasBody { get; private set; }
 
         public bool Expect100Continue { get; set; } = true;
 
@@ -164,7 +171,7 @@ namespace AppManager2.ViewModels
 
         private void OnHttpTypeChanged()
         {
-            IsPost = HttpUtils.TypePost.Equals(HttpType);
+            HasBody = HttpUtils.HasRequestBody(HttpType);
         }
 
         #endregion
@@ -287,14 +294,14 @@ namespace AppManager2.ViewModels
                 switch (ParamModeIndex)
                 {
                     case 0: // Form
-                        if (IsPost)
+                        if (HasBody)
                         {
-                            // post还会有form的contentType
+                            // 带请求体的方式才会有form的contentType
                             contentType = FormIsFormData ? HttpUtils.ContentTypeFormData : HttpUtils.ContentTypeFormUrlencoded;
                         }
                         else
                         {
-                            // get方式如果配置了Form 清除
+                            // 无请求体方式（Get/Head/Options）配置了Form则清除
                             paramStr = "";
                         }
                         break;
@@ -323,15 +330,15 @@ namespace AppManager2.ViewModels
                         paramStr = formData.TextParams.ContainsKey("RawBody") ? formData.TextParams["RawBody"].FirstOrDefault() : RawBody;
                         break;
                 }
-                if (IsPost)
+                if (HasBody)
                 {
-                    // post请求才会有Expect100Continue
+                    // 带请求体的方式才会有Expect100Continue
                     httpSend.Expect100Continue = Expect100Continue;
                 }
                 httpSend.ContentType = contentType;
 
                 HttpWebRequest request;
-                if (ParamModeIndex == 0 && IsPost && FormIsFormData && formData.HasFiles)
+                if (ParamModeIndex == 0 && HasBody && FormIsFormData && formData.HasFiles)
                 {
                     // 使用 multipart/form-data 上传文件
                     request = HttpUtils.HttpRequestMultipart(url, HttpType, formData.TextParams, formData.Files, timeout, headDic, Expect100Continue);
@@ -421,7 +428,7 @@ namespace AppManager2.ViewModels
             switch (ParamModeIndex)
             {
                 case 0: // Form
-                    if (IsPost)
+                    if (HasBody)
                     {
                         contentType = FormIsFormData ? HttpUtils.ContentTypeFormData : HttpUtils.ContentTypeFormUrlencoded;
                     }
@@ -449,7 +456,7 @@ namespace AppManager2.ViewModels
                     }
                     break;
             }
-            if (IsPost)
+            if (HasBody)
             {
                 httpSend.Expect100Continue = Expect100Continue;
             }
@@ -585,7 +592,7 @@ namespace AppManager2.ViewModels
         {
             HttpUrl = httpSend.Url;
             HttpType = httpSend.Type;
-            if (IsPost && httpSend.Expect100Continue != null)
+            if (HasBody && httpSend.Expect100Continue != null)
             {
                 Expect100Continue = Convert.ToBoolean(httpSend.Expect100Continue);
             }

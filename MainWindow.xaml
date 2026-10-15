@@ -539,7 +539,7 @@
         </TabControl>
 
         <!-- 状态栏：左=瞬时提示（对应OperateMessageStatusLabel），右=IP/作者 -->
-        <StatusBar Grid.Row="1">
+        <StatusBar Grid.Row="1" FontSize="14">
             <StatusBarItem HorizontalAlignment="Left" Margin="10 0 0 0">
                 <TextBlock Text="{Binding OperateMessage}" Foreground="{Binding OperateMessageBrush}"/>
             </StatusBarItem>
