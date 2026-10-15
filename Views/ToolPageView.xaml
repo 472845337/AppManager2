@@ -92,7 +92,7 @@
 
             <!-- Form/Raw参数区 -->
             <TabControl Grid.Row="2" SelectedIndex="{Binding ParamModeIndex}" Background="Transparent" BorderThickness="1" BorderBrush="#ddd">
-                <TabItem Header="Form">
+                <TabItem Header="Form" Width="60">
                     <DockPanel>
                         <DockPanel DockPanel.Dock="Top" LastChildFill="False">
                             <RadioButton Style="{StaticResource FormValue_Style}" Content="form-data" GroupName="FormContentType"
@@ -122,8 +122,7 @@
                                             </ComboBox>
                                             <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="1" Text="{Binding Key, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center" ToolTip="参数名" Template="{StaticResource PlaceHolder}" Tag="Key"/>
-                                            <GridSplitter Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd"
-                                                      ResizeBehavior="PreviousAndNext"/>
+                                            <GridSplitter Margin="0 5 0 0" Grid.Column="2" VerticalAlignment="Stretch" Width="4" Background="#ddd"                                                      ResizeBehavior="PreviousAndNext"/>
                                             <TextBox Style="{StaticResource FormValue_Style}" Grid.Column="3" Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
                                                              VerticalContentAlignment="Center"
                                                              ToolTip="file类型双击选择文件" Template="{StaticResource PlaceHolder}" Tag="Value">
@@ -143,7 +142,7 @@
                         </ScrollViewer>
                     </DockPanel>
                 </TabItem>
-                <TabItem Header="Raw">
+                <TabItem Header="Raw" Width="60">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>

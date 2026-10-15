@@ -52,6 +52,8 @@ namespace AppManager2.Config
         public const string IniKeyFormWidth = "width";
         public const string IniKeyFormLocationX = "location_x";
         public const string IniKeyFormLocationY = "location_y";
+        // 窗口是否以最大化状态关闭（下次启动恢复全屏；最小化关闭按正常状态记录）
+        public const string IniKeyFormMaximized = "maximized";
         public const string IniKeyAppSplitRatio = "split_ratio";
         // 项目树组的收缩状态（保存收缩组名单，|分隔）
         public const string IniKeyAppTreeCollapsed = "tree_collapsed";
@@ -142,6 +144,7 @@ namespace AppManager2.Config
         public static int Width;
         public static int Left;
         public static int Top;
+        public static bool WindowMaximized;
 
         public static int SelectedIndex;
     }

@@ -8,11 +8,18 @@ namespace AppManager2.Services
         private static HttpSendService _instance;
         public static HttpSendService Instance => _instance ??= new HttpSendService();
 
+        private HttpSendService()
+        {
+            EnsureTable();
+        }
+
         public bool Save(HttpSend httpSend)
         {
             if (httpSend == null) return false;
 
             long id = Insert(httpSend);
+
+            if (id <= 0) return false; // 主表插入失败时不写子表，避免产生 http_send_id=0 的孤儿参数
 
             if (httpSend.ParamList != null && httpSend.ParamList.Count > 0)
             {

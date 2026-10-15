@@ -7,8 +7,8 @@
         mc:Ignorable="d"
         Title="发送记录" Height="500" Width="800" MinHeight="300" MinWidth="500"
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/httpsend.ico"
-        WindowStartupLocation="Manual"
-        SourceInitialized="Window_SourceInitialized" ResizeMode="CanResizeWithGrip">
+        WindowStartupLocation="Manual" UseLayoutRounding="True" SnapsToDevicePixels="True"
+        ResizeMode="CanResizeWithGrip">
     <Window.DataContext>
         <vm:HttpSendFormViewModel/>
     </Window.DataContext>
@@ -22,12 +22,16 @@
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderBrush="#ccc" BorderThickness="1" Margin="5">
-            <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                    <Button Style="{StaticResource Btn_Info}" Content="刷新" Command="{Binding RefreshCommand}" Width="56" Margin="2"/>
-                    <Button Style="{StaticResource Btn_Danger}" Content="删除" Command="{Binding DeleteCommand}" Width="56" Margin="2"/>
-                    <Button Style="{StaticResource Btn_Danger}" Content="清空" Command="{Binding ClearCommand}" Width="56" Margin="2"/>
-                    <Button Style="{StaticResource Btn_Warn}" Content="去重" Width="56" Margin="2" Click="DeduplicateButton_Click"
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                <WrapPanel Grid.Row="0" Orientation="Horizontal">
+                    <Button Style="{StaticResource Btn_Info}" Content="刷新" Command="{Binding RefreshCommand}"/>
+                    <Button Style="{StaticResource Btn_Warn}" Content="删除" Command="{Binding DeleteCommand}"/>
+                    <Button Style="{StaticResource Btn_Danger}" Content="清空" Command="{Binding ClearCommand}"/>
+                    <Button Style="{StaticResource Btn_Suc}" Content="去重" Click="DeduplicateButton_Click"
                             ToolTip="按链接/参数去重或清除异常记录">
                         <Button.ContextMenu>
                             <ContextMenu>
@@ -37,9 +41,9 @@
                             </ContextMenu>
                         </Button.ContextMenu>
                     </Button>
-                    <Button Style="{StaticResource Btn_Pri}" Content="重发" Command="{Binding SendAgainCommand}" Width="56" Margin="2"/>
-                </StackPanel>
-                <ListBox ItemsSource="{Binding HttpSendList}" SelectedItem="{Binding SelectedHttpSend}"
+                    <Button Style="{StaticResource Btn_Pri}" Content="重发" Command="{Binding SendAgainCommand}"/>
+                </WrapPanel>
+                <ListBox Margin="4" Grid.Row="1" ItemsSource="{Binding HttpSendList}" SelectedItem="{Binding SelectedHttpSend}"
                          VirtualizingPanel.IsVirtualizing="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
@@ -56,10 +60,10 @@
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>
-            </DockPanel>
+            </Grid>
         </Border>
 
-        <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#ddd"
+        <GridSplitter Margin="0 5" Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#ddd"
                       ResizeBehavior="PreviousAndNext" DragCompleted="Splitter_DragCompleted"/>
 
         <Border Grid.Column="2" BorderBrush="#ccc" BorderThickness="1" Margin="5">

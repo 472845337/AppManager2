@@ -488,7 +488,9 @@ namespace AppManager2.DataBase
             }
             this.EnsureConnection();
             string sql = BuildInsert(table, entity);
-            return (long)this.ExecuteScalar(sql, BuildParamArray(entity));
+            // ExecuteScalar 失败时返回 null（异常已被内部捕获），直接拆箱会抛 NullReferenceException
+            object result = this.ExecuteScalar(sql, BuildParamArray(entity));
+            return result == null ? 0 : (long)result;
         }
 
         /// <summary>  

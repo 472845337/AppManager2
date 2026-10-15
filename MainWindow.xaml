@@ -193,19 +193,20 @@
                                         <Setter.Value>
                                             <ControlTemplate TargetType="TreeViewItem">
                                                 <StackPanel>
-                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" Padding="0,1" SnapsToDevicePixels="True">
+                                                    <Border x:Name="Bd" Background="{TemplateBinding Background}" SnapsToDevicePixels="True">
                                                         <Grid>
                                                             <Grid Background="Transparent">
                                                                 <Grid.ColumnDefinitions>
-                                                                    <ColumnDefinition Width="18"/>
+                                                                    <ColumnDefinition Width="Auto"/>
                                                                     <ColumnDefinition Width="*"/>
                                                                 </Grid.ColumnDefinitions>
                                                                 <ToggleButton x:Name="Expander" Grid.Column="0" ClickMode="Press" Focusable="False"
-                                                                                  IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
+                                                                              Foreground="#666666"
+                                                                              IsChecked="{Binding IsExpanded, RelativeSource={RelativeSource TemplatedParent}, Mode=TwoWay}">
                                                                     <ToggleButton.Template>
                                                                         <ControlTemplate TargetType="ToggleButton">
                                                                             <Border Width="16" Height="16" Background="Transparent" HorizontalAlignment="Center">
-                                                                                <Path x:Name="ExpandPath" Data="M 0 0 L 4 4 L 0 8 Z" Fill="#666666"
+                                                                                <Path x:Name="ExpandPath" Data="M 0 0 L 6 6 L 0 12 Z" Fill="{TemplateBinding Foreground}"
                                                                                           HorizontalAlignment="Center" VerticalAlignment="Center"
                                                                                           RenderTransformOrigin="0.5,0.5">
                                                                                 </Path>
@@ -239,7 +240,7 @@
                                                     </Trigger>
                                                     <!-- 组内项目：仅头部内容右移一层标识归属，整行背景（状态色/选中/悬停）保持铺满不缺角 -->
                                                     <DataTrigger Binding="{Binding IsGroupMember}" Value="True">
-                                                        <Setter TargetName="PART_Header" Property="Margin" Value="18,0,0,0"/>
+                                                        <Setter TargetName="PART_Header" Property="Margin" Value="16,0,0,0"/>
                                                     </DataTrigger>
                                                     <Trigger Property="IsExpanded" Value="False">
                                                         <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
@@ -247,6 +248,8 @@
                                                     <Trigger Property="IsSelected" Value="True">
                                                         <Setter TargetName="Bd" Property="Background" Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}"/>
                                                         <Setter Property="Foreground" Value="White"/>
+                                                        <!-- 选中行深蓝背景下三角符同步变白（随文字颜色），否则灰色看不清 -->
+                                                        <Setter TargetName="Expander" Property="Foreground" Value="White"/>
                                                     </Trigger>
                                                     <!-- 悬停不覆盖背景：保留运行状态色，仅叠加半透明高亮遮罩（HoverOverlay）提示 -->
                                                     <MultiTrigger>

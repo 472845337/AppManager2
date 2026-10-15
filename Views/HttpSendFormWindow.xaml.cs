@@ -14,14 +14,17 @@ namespace AppManager2.Views
         public HttpSendFormWindow()
         {
             InitializeComponent();
+            RestoreFromIni();
         }
 
         private static string IniPath => global::AppManager2.Config.Configs.AppPath + "\\" + global::AppManager2.Config.Configs.SystemIniPath;
 
         /// <summary>
-        /// 加载记忆的窗口大小/位置与分栏宽度（对应老项目HttpSendForm_Load）
+        /// 加载记忆的窗口大小/位置与分栏宽度（对应老项目HttpSendForm_Load）。
+        /// 必须在构造函数里、窗口句柄创建之前赋值：窗口按最终尺寸一次生成，
+        /// 避免Show后（SourceInitialized阶段）再改尺寸导致首帧闪变、按钮重排
         /// </summary>
-        private void Window_SourceInitialized(object sender, EventArgs e)
+        private void RestoreFromIni()
         {
             var iniData = IniParserUtils.GetIniData(IniPath);
             var section = iniData[global::AppManager2.Config.Configs.IniSectionSend];

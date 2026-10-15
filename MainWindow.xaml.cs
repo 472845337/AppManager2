@@ -103,7 +103,8 @@ namespace AppManager2
 
         /// <summary>
         /// 从System.ini [system]读取上次的窗口位置和宽高；无记录时居中。
-        /// 位置超出虚拟屏幕时拉回可见范围（对应老项目InitMainForm的VirtualScreen修正）
+        /// 位置超出虚拟屏幕时拉回可见范围（对应老项目InitMainForm的VirtualScreen修正）；
+        /// 上次以最大化关闭时恢复全屏（几何仍按正常态记录，还原时回到原尺寸）
         /// </summary>
         private void LoadWindowGeometry()
         {
@@ -113,6 +114,7 @@ namespace AppManager2
             var widthStr = section[Configs.IniKeyFormWidth];
             var xStr = section[Configs.IniKeyFormLocationX];
             var yStr = section[Configs.IniKeyFormLocationY];
+            Configs.WindowMaximized = "1".Equals(section[Configs.IniKeyFormMaximized]);
 
             var heightOk = double.TryParse(heightStr, out var height);
             var widthOk = double.TryParse(widthStr, out var width);
@@ -135,20 +137,22 @@ namespace AppManager2
                 {
                     // 只有尺寸记录时保持默认居中坐标
                     WindowStartupLocation = WindowStartupLocation.CenterScreen;
-                    return;
                 }
-                // 位置超出虚拟屏幕时，调整位置（显示器拔掉/分辨率变化后窗口不至于丢在屏幕外）
-                var virtualLeft = SystemParameters.VirtualScreenLeft;
-                var virtualTop = SystemParameters.VirtualScreenTop;
-                var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
-                var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
-                if (x + ActualWidth > virtualRight) x = virtualRight - Width;
-                else if (x < virtualLeft) x = virtualLeft;
-                if (y + Height > virtualBottom) y = virtualBottom - Height;
-                else if (y < virtualTop) y = virtualTop;
-                WindowStartupLocation = WindowStartupLocation.Manual;
-                Left = x;
-                Top = y;
+                else
+                {
+                    // 位置超出虚拟屏幕时，调整位置（显示器拔掉/分辨率变化后窗口不至于丢在屏幕外）
+                    var virtualLeft = SystemParameters.VirtualScreenLeft;
+                    var virtualTop = SystemParameters.VirtualScreenTop;
+                    var virtualRight = virtualLeft + SystemParameters.VirtualScreenWidth;
+                    var virtualBottom = virtualTop + SystemParameters.VirtualScreenHeight;
+                    if (x + ActualWidth > virtualRight) x = virtualRight - Width;
+                    else if (x < virtualLeft) x = virtualLeft;
+                    if (y + Height > virtualBottom) y = virtualBottom - Height;
+                    else if (y < virtualTop) y = virtualTop;
+                    WindowStartupLocation = WindowStartupLocation.Manual;
+                    Left = x;
+                    Top = y;
+                }
             }
             else
             {
@@ -156,19 +160,59 @@ namespace AppManager2
             }
             Configs.Left = Convert.ToInt32(Left);
             Configs.Top = Convert.ToInt32(Top);
+
+            // 恢复上次的 maximized 状态（Left/Top/Width/Height仍为正常态几何，还原时不丢原尺寸）
+            if (Configs.WindowMaximized)
+            {
+                WindowState = WindowState.Maximized;
+            }
         }
 
         /// <summary>
-        /// 保存窗口位置和宽高到System.ini [system]（对应老项目ResizeEnd/FormClose保存）；
-        /// 最小化/最大化时不保存，避免记录中间态尺寸
+        /// 保存窗口位置、宽高和最大化状态到System.ini [system]（对应老项目ResizeEnd/FormClose保存）；
+        /// 最大化时记录标记（下次启动恢复全屏）；最小化按正常状态处理；
+        /// 非正常态下Left/Top/Width/Height是中间态，几何统一取RestoreBounds（还原后的正常态尺寸）
         /// </summary>
         private void SaveWindowGeometry()
         {
-            if (WindowState != WindowState.Normal) return;
-            if (Configs.Height != Height) IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormHeight, Convert.ToInt32(Height).ToString());
-            if (Configs.Width != Width) IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormWidth, Convert.ToInt32(Width).ToString());
-            if (Configs.Left != Left) IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, Convert.ToInt32(Left).ToString());
-            if (Configs.Top != Top) IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, Convert.ToInt32(Top).ToString());
+            // 最小化关闭：WindowState非Maximized，标记为正常状态
+            var isMaximized = WindowState == WindowState.Maximized;
+            if (Configs.WindowMaximized != isMaximized)
+            {
+                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormMaximized, isMaximized ? "1" : "0");
+                Configs.WindowMaximized = isMaximized;
+            }
+
+            double x, y, w, h;
+            if (WindowState == WindowState.Normal)
+            {
+                x = Left; y = Top; w = Width; h = Height;
+            }
+            else
+            {
+                var bounds = RestoreBounds;
+                x = bounds.X; y = bounds.Y; w = bounds.Width; h = bounds.Height;
+            }
+            if (Configs.Height != h)
+            {
+                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormHeight, Convert.ToInt32(h).ToString());
+                Configs.Height = Convert.ToInt32(h);
+            }
+            if (Configs.Width != w)
+            {
+                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormWidth, Convert.ToInt32(w).ToString());
+                Configs.Width = Convert.ToInt32(w);
+            }
+            if (Configs.Left != x)
+            {
+                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, Convert.ToInt32(x).ToString());
+                Configs.Left = Convert.ToInt32(x);
+            }
+            if (Configs.Top != y)
+            {
+                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, Convert.ToInt32(y).ToString());
+                Configs.Top = Convert.ToInt32(y);
+            }
         }
 
         #endregion
@@ -267,19 +311,6 @@ namespace AppManager2
             Close();
         }
 
-        /// <summary>
-        /// 最小化时隐藏到托盘（对应老项目Form1_SizeChanged）
-        /// </summary>
-        protected override void OnStateChanged(EventArgs e)
-        {
-            if (WindowState == WindowState.Minimized)
-            {
-                Hide();
-                ShowInTaskbar = false;
-            }
-            base.OnStateChanged(e);
-        }
-
         protected override void OnClosed(EventArgs e)
         {
             _notifyIcon?.Dispose();
@@ -371,6 +402,22 @@ namespace AppManager2
             if (e.NewValue is TreeItemModel item)
             {
                 ViewModel.SelectedApp = item;
+                // 选中项目时状态栏提示项目名：组内项目带组名前缀显示为“组名/项目名”，紫色
+                var displayName = "";
+
+                if (item.IsGroupMember && !string.IsNullOrEmpty(item.GroupName))
+                {
+                    // 有组的项目才显示组名
+                    displayName += item.GroupName;
+                }
+
+                if (!string.IsNullOrEmpty(displayName))
+                {
+                    displayName += "/";
+                }
+                displayName += item.Name;
+
+                ViewModel.ShowMessage("已选中节点：" + displayName, Brushes.Purple);
             }
             else if (e.NewValue == null)
             {
