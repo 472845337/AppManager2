@@ -12,17 +12,14 @@ using System.Windows;
 using System.Windows.Input;
 using Utils;
 
-namespace AppManager2.ViewModels
-{
+namespace AppManager2.ViewModels {
     /// <summary>
     /// 应用导出窗口VM（对应老项目 AppExportForm）
     /// </summary>
     [AddINotifyPropertyChangedInterface]
-    public class AppExportViewModel
-    {
+    public class AppExportViewModel {
         [AddINotifyPropertyChangedInterface]
-        public class ExportItem
-        {
+        public class ExportItem {
             public string Section { get; set; }
             public string Title { get; set; }
             public bool IsChecked { get; set; }
@@ -31,14 +28,11 @@ namespace AppManager2.ViewModels
         public ObservableCollection<ExportItem> ExportApps { get; set; }
 
         private bool _selectAll = true;
-        public bool SelectAll
-        {
+        public bool SelectAll {
             get => _selectAll;
-            set
-            {
+            set {
                 _selectAll = value;
-                foreach (var item in ExportApps)
-                {
+                foreach (var item in ExportApps) {
                     item.IsChecked = value;
                 }
             }
@@ -50,8 +44,7 @@ namespace AppManager2.ViewModels
         private readonly AppService _appService;
         private Window _window;
 
-        public AppExportViewModel()
-        {
+        public AppExportViewModel() {
             _appService = AppService.Instance;
             ExportApps = new ObservableCollection<ExportItem>();
             ExportCommand = new RelayCommand(OnExport);
@@ -59,20 +52,16 @@ namespace AppManager2.ViewModels
             LoadApps();
         }
 
-        public void SetWindow(Window window)
-        {
+        public void SetWindow(Window window) {
             _window = window;
         }
 
-        private void LoadApps()
-        {
+        private void LoadApps() {
             ExportApps.Clear();
-            foreach (var section in _appService.GetAllSections())
-            {
+            foreach (var section in _appService.GetAllSections()) {
                 var app = _appService.GetAppBySection(section);
                 if (app == null) continue;
-                ExportApps.Add(new ExportItem
-                {
+                ExportApps.Add(new ExportItem {
                     Section = app.Section,
                     Title = app.Title,
                     IsChecked = true
@@ -80,26 +69,21 @@ namespace AppManager2.ViewModels
             }
         }
 
-        private void OnRefresh(object obj)
-        {
+        private void OnRefresh(object obj) {
             LoadApps();
         }
 
-        private void OnExport(object obj)
-        {
+        private void OnExport(object obj) {
             var checkedList = ExportApps.Where(i => i.IsChecked).Select(i => i.Section).ToList();
-            if (checkedList.Count == 0)
-            {
+            if (checkedList.Count == 0) {
                 MessageBox.Show("未选择导出数据！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
             var exportDic = new LinkedHashMap<string, AppSection>();
-            foreach (var section in checkedList)
-            {
+            foreach (var section in checkedList) {
                 var app = _appService.GetAppBySection(section);
-                if (app == null)
-                {
+                if (app == null) {
                     MessageBox.Show("数据已变更，请刷新后再试！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -108,20 +92,16 @@ namespace AppManager2.ViewModels
 
             // 导出：JSON序列化后AES加密
             var content = JsonConvert.SerializeObject(exportDic);
-            var saveFileDialog = new Microsoft.Win32.SaveFileDialog
-            {
+            var saveFileDialog = new Microsoft.Win32.SaveFileDialog {
                 Filter = "Amp Files(*.amp)|*.amp",
                 FileName = "AppConfig"
             };
             if (saveFileDialog.ShowDialog() != true) return;
-            try
-            {
+            try {
                 File.WriteAllText(saveFileDialog.FileName, AesUtils.Encrypt(content), new UTF8Encoding(false));
                 MessageBox.Show("导出成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 _window?.Close();
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 MessageBox.Show($"导出失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }

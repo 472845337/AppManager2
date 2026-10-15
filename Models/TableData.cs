@@ -1,9 +1,7 @@
 using AppManager2.CustomEnum;
 
-namespace AppManager2.Models
-{
-    public abstract class TableData
-    {
+namespace AppManager2.Models {
+    public abstract class TableData {
         [TableParam("id", "INTEGER", true)]
         public long? Id { get; set; }
 

@@ -1,14 +1,12 @@
 ﻿using PropertyChanged;
 using System;
 
-namespace AppManager2.Models
-{
+namespace AppManager2.Models {
     /// <summary>
     /// 设置页自启动列表项（对应老项目AutoRunAppFlowLayoutPanel中的CheckBox）
     /// </summary>
     [AddINotifyPropertyChangedInterface]
-    public class AutoRunItemModel
-    {
+    public class AutoRunItemModel {
         public string Section { get; set; }
         public string Title { get; set; }
 
@@ -18,8 +16,7 @@ namespace AppManager2.Models
         [OnChangedMethod(nameof(OnIsCheckedChanged))]
         public bool IsChecked { get; set; }
 
-        private void OnIsCheckedChanged()
-        {
+        private void OnIsCheckedChanged() {
             CheckedChanged?.Invoke(this);
         }
     }

@@ -378,7 +378,7 @@
                             <DataTemplate>
                                 <DockPanel>
                                     <!-- 底部输入框：回车向进程stdin发送输入（对应老项目CreateAppRunTabPage的输入TextBox） -->
-                                    <TextBox DockPanel.Dock="Bottom" Height="25" Margin="0,4,0,0"
+                                    <TextBox DockPanel.Dock="Bottom" Height="25" Margin="0,4,0,0" Padding="2"
                                                  Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
                                                  Template="{StaticResource PlaceHolder}" Tag="输入内容后回车发送到进程">
                                         <TextBox.InputBindings>

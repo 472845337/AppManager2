@@ -7,11 +7,9 @@ using PropertyChanged;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
 
-namespace AppManager2.ViewModels
-{
+namespace AppManager2.ViewModels {
     [AddINotifyPropertyChangedInterface]
-    public class AppPageViewModel : BaseViewModel
-    {
+    public class AppPageViewModel : BaseViewModel {
         private readonly AppService _appService;
 
         public ObservableCollection<TreeItemModel> AppTree { get; set; }
@@ -30,8 +28,7 @@ namespace AppManager2.ViewModels
         public ICommand ClearAllCommand { get; set; }
         public ICommand CloseTabCommand { get; set; }
 
-        public AppPageViewModel()
-        {
+        public AppPageViewModel() {
             _appService = AppService.Instance;
             AppTree = new ObservableCollection<TreeItemModel>();
             RunningApps = new ObservableCollection<AppRunTabItemModel>();
@@ -40,8 +37,7 @@ namespace AppManager2.ViewModels
             _appService.AppListChanged += BuildAppTree;
         }
 
-        private void InitializeCommands()
-        {
+        private void InitializeCommands() {
             AddAppCommand = new RelayCommand(OnAddApp);
             EditAppCommand = new RelayCommand(OnEditApp);
             DeleteAppCommand = new RelayCommand(OnDeleteApp);
@@ -54,8 +50,7 @@ namespace AppManager2.ViewModels
             CloseTabCommand = new RelayCommand(OnCloseTab);
         }
 
-        private void OnAddApp(object obj)
-        {
+        private void OnAddApp(object obj) {
             var window = new AppFormWindow();
             window.Owner = System.Windows.Application.Current.MainWindow;
             window.SetOperateType(Configs.OperateTypeAdd);
@@ -66,21 +61,18 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 根据 AppService 缓存构建应用树：有分组的按分组归组，无分组的直接挂在根节点
         /// </summary>
-        private void BuildAppTree()
-        {
+        private void BuildAppTree() {
             AppTree.Clear();
 
             var sections = _appService.GetAllSections();
             var dic = _appService.GetAllSectionDic();
             var groupNodes = new System.Collections.Generic.Dictionary<string, TreeItemModel>();
 
-            foreach (var section in sections)
-            {
+            foreach (var section in sections) {
                 var app = dic.TryGetValue(section, out var v) ? v : null;
                 if (app == null) continue;
 
-                var child = new TreeItemModel
-                {
+                var child = new TreeItemModel {
                     Name = app.Title,
                     Flag = "child",
                     Section = app.Section,
@@ -90,14 +82,10 @@ namespace AppManager2.ViewModels
                     IsWarn = app.IsWarn
                 };
 
-                if (string.IsNullOrEmpty(app.Group))
-                {
+                if (string.IsNullOrEmpty(app.Group)) {
                     AppTree.Add(child);
-                }
-                else
-                {
-                    if (!groupNodes.TryGetValue(app.Group, out var groupNode))
-                    {
+                } else {
+                    if (!groupNodes.TryGetValue(app.Group, out var groupNode)) {
                         groupNode = new TreeItemModel { Name = app.Group, Flag = "group", GroupName = app.Group };
                         groupNodes[app.Group] = groupNode;
                         AppTree.Add(groupNode);

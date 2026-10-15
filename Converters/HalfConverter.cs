@@ -2,12 +2,9 @@
 using System.Globalization;
 using System.Windows.Data;
 
-namespace AppManager2.Converters
-{
-    public class HalfConverter : BaseValueConverter<HalfConverter>
-    {
-        public override object Convert(object value, Type targetType, object parameter, CultureInfo culture)
-        {
+namespace AppManager2.Converters {
+    public class HalfConverter : BaseValueConverter<HalfConverter> {
+        public override object Convert(object value, Type targetType, object parameter, CultureInfo culture) {
             if (value == null)
                 return 0d;
 
@@ -34,8 +31,7 @@ namespace AppManager2.Converters
             return System.Convert.ChangeType(result, targetType, culture);
         }
 
-        public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)
-        {
+        public override object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture) {
             // CornerRadius -> Width 的场景很少用，如需可乘以 2
             if (value is double d)
                 return d * 2.0;

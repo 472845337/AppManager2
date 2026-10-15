@@ -1,9 +1,7 @@
 ﻿using System;
 
-namespace AppManager2.Config
-{
-    public static class Configs
-    {
+namespace AppManager2.Config {
+    public static class Configs {
         public static string AppPath => AppDomain.CurrentDomain.BaseDirectory;
         public const string AuthorEmail = "1320311706@qq.com";
 

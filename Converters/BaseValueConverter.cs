@@ -3,15 +3,12 @@ using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Markup;
 
-namespace AppManager2.Converters
-{
+namespace AppManager2.Converters {
     public abstract class BaseValueConverter<T> : MarkupExtension, IValueConverter
-        where T : class, new()
-    {
+        where T : class, new() {
         private static T mConverter = null;
 
-        public override object ProvideValue(IServiceProvider serviceProvider)
-        {
+        public override object ProvideValue(IServiceProvider serviceProvider) {
             return mConverter ??= new T();
         }
 

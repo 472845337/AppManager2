@@ -1,7 +1,5 @@
-namespace AppManager2.Models
-{
-    public class AppSection
-    {
+namespace AppManager2.Models {
+    public class AppSection {
         public string Type { get; set; }
         public string Section { get; set; }
         public string Title { get; set; }

@@ -21,11 +21,9 @@ using System.Windows.Media.Imaging;
 using System.Windows.Threading;
 using Utils;
 
-namespace AppManager2.ViewModels
-{
+namespace AppManager2.ViewModels {
     [AddINotifyPropertyChangedInterface]
-    public class MainWindowViewModel : BaseViewModel
-    {
+    public class MainWindowViewModel : BaseViewModel {
         public ObservableCollection<TreeItemModel> AppTree { get; set; }
         public ObservableCollection<AppRunTabItemModel> RunningApps { get; set; }
 
@@ -66,20 +64,16 @@ namespace AppManager2.ViewModels
         // 关闭时设置（对应老项目ClosedTypeGroup：退出/最小化）
         private bool _isClosedExit = true;
         private bool _isClosedMin;
-        public bool IsClosedExit
-        {
+        public bool IsClosedExit {
             get => _isClosedExit;
-            set
-            {
+            set {
                 _isClosedExit = value;
                 if (value) _isClosedMin = false;
             }
         }
-        public bool IsClosedMin
-        {
+        public bool IsClosedMin {
             get => _isClosedMin;
-            set
-            {
+            set {
                 _isClosedMin = value;
                 if (value) _isClosedExit = false;
             }
@@ -94,14 +88,12 @@ namespace AppManager2.ViewModels
         [OnChangedMethod(nameof(OnAutoRunAllChanged))]
         public bool AutoRunAll { get; set; }
 
-        private void OnAutoRunAllChanged()
-        {
+        private void OnAutoRunAllChanged() {
             if (_buildingAutoRun) return;
             // 目标值必须先存局部变量：每勾一项，HandleAutoRunItemChanged会重算并回写
             // AutoRunAll（“尚未全选”时改回false），若循环内直接读属性，第一项之后就全是false了
             var checkAll = AutoRunAll;
-            foreach (var item in AutoRunItems)
-            {
+            foreach (var item in AutoRunItems) {
                 item.IsChecked = checkAll; // 勾选回调负责同步项目AutoRun并入库
             }
         }
@@ -168,8 +160,7 @@ namespace AppManager2.ViewModels
         private static readonly Brush GroupYellowBrush = CreateBrush(Color.FromRgb(255, 255, 0));     // Yellow
         private static readonly Brush GroupYellowGreenBrush = CreateBrush(Color.FromRgb(154, 205, 50));
 
-        public MainWindowViewModel()
-        {
+        public MainWindowViewModel() {
             _appService = AppService.Instance;
             _runService = AppRunService.Instance;
             _monitorService = AppMonitorService.Instance;
@@ -187,22 +178,19 @@ namespace AppManager2.ViewModels
             AuthorInfo = "作者:" + Configs.AuthorEmail;
         }
 
-        private static ImageSource LoadIcon(string relativePath)
-        {
+        private static ImageSource LoadIcon(string relativePath) {
             var image = new BitmapImage(new Uri($"pack://application:,,,/AppManager2;component/{relativePath}"));
             image.Freeze();
             return image;
         }
 
-        private static Brush CreateBrush(Color color)
-        {
+        private static Brush CreateBrush(Color color) {
             var brush = new SolidColorBrush(color);
             brush.Freeze();
             return brush;
         }
 
-        private void InitializeCommands()
-        {
+        private void InitializeCommands() {
             AddAppCommand = new RelayCommand(OnAddApp);
             EditAppCommand = new RelayCommand(OnEditApp, CanEditOrDeleteApp);
             DeleteAppCommand = new RelayCommand(OnDeleteApp, CanEditOrDeleteApp);
@@ -237,8 +225,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 订阅运行/监控服务事件（事件可能在非UI线程触发，统一切换到UI线程处理）
         /// </summary>
-        private void WireEvents()
-        {
+        private void WireEvents() {
             _appService.AppListChanged += () => RunOnUi(SyncTree);
             _runService.LogReceived += (section, line) => RunOnUi(() => AppendTabLog(section, line));
             _monitorService.LogReceived += (section, line) => RunOnUi(() => AppendTabLog(section, line));
@@ -246,31 +233,24 @@ namespace AppManager2.ViewModels
             _monitorService.StartRequested += app => RunOnUi(() => AutoStartApp(app));
         }
 
-        private void InitMessageTimer()
-        {
-            _messageTimer.Tick += (s, e) =>
-            {
+        private void InitMessageTimer() {
+            _messageTimer.Tick += (s, e) => {
                 _messageTimer.Stop();
                 OperateMessage = string.Empty;
             };
         }
 
-        private void RunOnUi(Action action)
-        {
+        private void RunOnUi(Action action) {
             var app = Application.Current;
             if (app?.Dispatcher == null) return;
-            if (app.Dispatcher.CheckAccess())
-            {
+            if (app.Dispatcher.CheckAccess()) {
                 action();
-            }
-            else
-            {
+            } else {
                 app.Dispatcher.BeginInvoke(action);
             }
         }
 
-        private void LoadData()
-        {
+        private void LoadData() {
             _appService.LoadFromDb();
             _monitorService.LoadSettings(); // 监控/预警配置加载到Configs（对应老项目InitEnv）
             LoadEnvSettings();              // 设置页各输入项加载（对应老项目InitEnv的UI部分）
@@ -284,19 +264,14 @@ namespace AppManager2.ViewModels
         /// 初始化监控：校验每个java应用的启动/停止bat脚本（对应老项目CheckSection），
         /// 对配置了自启动的应用执行启动（MonitorApp的appInit逻辑），最后启动定时监控
         /// </summary>
-        private void InitAppMonitor()
-        {
-            try
-            {
-                foreach (var section in _appService.GetAllSections().ToList())
-                {
+        private void InitAppMonitor() {
+            try {
+                foreach (var section in _appService.GetAllSections().ToList()) {
                     var app = _appService.GetAppBySection(section);
                     CheckSection(app, false);
                     _monitorService.MonitorApp(app, true);
                 }
-            }
-            catch (BusinessException ex)
-            {
+            } catch (BusinessException ex) {
                 MessageBox.Show(ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             _monitorService.Start();
@@ -305,61 +280,48 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 校验项目配置参数：java项目不存在启动/停止bat时生成（对应老项目CheckSection）
         /// </summary>
-        private void CheckSection(AppSection appSection, bool forceUpdate)
-        {
+        private void CheckSection(AppSection appSection, bool forceUpdate) {
             if (null == appSection) return;
-            if (Configs.AppTypeJava.Equals(appSection.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart))))
-            {
+            if (Configs.AppTypeJava.Equals(appSection.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart)))) {
                 var result = JavaAppUtils.CreateStartBat(appSection, Configs.LogFileInfo, Configs.LogFileError);
-                if (!bool.TrueString.Equals(result))
-                {
+                if (!bool.TrueString.Equals(result)) {
                     throw new BusinessException(result);
                 }
             }
-            if (Configs.AppTypeJava.Equals(appSection.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop))))
-            {
+            if (Configs.AppTypeJava.Equals(appSection.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop)))) {
                 JavaAppUtils.CreateStopBat(appSection);
             }
         }
 
-        private void LoadSplitRatio()
-        {
-            try
-            {
+        private void LoadSplitRatio() {
+            try {
                 var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
-                if (iniData.Sections.ContainsSection(Configs.IniSectionApp))
-                {
+                if (iniData.Sections.ContainsSection(Configs.IniSectionApp)) {
                     var ratioStr = iniData[Configs.IniSectionApp][Configs.IniKeyAppSplitRatio];
-                    if (!string.IsNullOrEmpty(ratioStr) && double.TryParse(ratioStr, out var ratio))
-                    {
+                    if (!string.IsNullOrEmpty(ratioStr) && double.TryParse(ratioStr, out var ratio)) {
                         TreeSplitRatio = Math.Max(0.1, Math.Min(0.8, ratio)); // 限制在10%-80%之间
                         RunSplitRatio = 1 - TreeSplitRatio;
                         return;
                     }
                 }
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 // 如果加载失败，使用默认值
                 TreeSplitRatio = 0.25;
                 RunSplitRatio = 0.75;
             }
         }
 
-        private void SaveSplitRatio()
-        {
+        private void SaveSplitRatio() {
             IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionApp, Configs.IniKeyAppSplitRatio, TreeSplitRatio.ToString("F3"));
         }
 
-        private void OnTreeSplitRatioChanged()
-        {
+        private void OnTreeSplitRatioChanged() {
             // 限制范围在10%-80%之间
             TreeSplitRatio = Math.Max(0.1, Math.Min(0.8, TreeSplitRatio));
             SaveSplitRatio();
         }
 
-        private void OnSelectedAppChanged()
-        {
+        private void OnSelectedAppChanged() {
             RelayCommand.Raise(StartAppCommand, StopAppCommand, EditAppCommand, DeleteAppCommand);
         }
 
@@ -368,8 +330,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 设置页各输入项加载（对应老项目InitEnv的UI赋值部分）
         /// </summary>
-        private void LoadEnvSettings()
-        {
+        private void LoadEnvSettings() {
             var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
             HeartBeatMsg = iniData[Configs.IniSectionSet][Configs.IniKeySetHeartBeat];
             IsWarnEnabled = bool.TrueString.Equals(iniData[Configs.IniSectionSet][Configs.IniKeySetIsWarn]);
@@ -384,8 +345,7 @@ namespace AppManager2.ViewModels
             if (string.IsNullOrEmpty(MonitorIntervalText)) MonitorIntervalText = "5";
 
             var closedType = iniData[Configs.IniSectionSet][Configs.IniKeySetClosedType];
-            if (string.IsNullOrEmpty(closedType))
-            {
+            if (string.IsNullOrEmpty(closedType)) {
                 closedType = Configs.ClosedTypeExit;
                 IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionSet, Configs.IniKeySetClosedType, Configs.ClosedTypeExit);
             }
@@ -401,8 +361,7 @@ namespace AppManager2.ViewModels
         /// 保存设置（对应老项目SetSaveButton_Click）：写入System.ini [set]，
         /// 同步Configs/JavaAppUtils静态值与监控运行参数
         /// </summary>
-        public void SaveSettings()
-        {
+        public void SaveSettings() {
             var heartBeat = HeartBeatMsg ?? string.Empty;
             var closedType = IsClosedExit ? Configs.ClosedTypeExit : Configs.ClosedTypeMin;
             var systemIni = Configs.AppPath + "\\" + Configs.SystemIniPath;
@@ -426,12 +385,10 @@ namespace AppManager2.ViewModels
             JavaAppUtils.LoadSettings(); // JdkPath/Profiles/LogPath重新从ini加载
             _monitorService.HeartBeatMsg = string.IsNullOrEmpty(heartBeat) ? Configs.HeartBeatMsg : heartBeat;
 
-            if (int.TryParse(MonitorTimeoutText, out var timeout) && timeout > 0)
-            {
+            if (int.TryParse(MonitorTimeoutText, out var timeout) && timeout > 0) {
                 Configs.MonitorTimeout = timeout;
             }
-            if (int.TryParse(MonitorIntervalText, out var interval) && interval > 0)
-            {
+            if (int.TryParse(MonitorIntervalText, out var interval) && interval > 0) {
                 Configs.MonitorInterval = interval;
                 _monitorService.UpdateInterval(); // 频次立即生效
             }
@@ -439,16 +396,14 @@ namespace AppManager2.ViewModels
             ShowMessage("保存成功", Brushes.Green);
         }
 
-        private void OnSaveSettings(object obj)
-        {
+        private void OnSaveSettings(object obj) {
             SaveSettings();
         }
 
         /// <summary>
         /// 环境配置是否有未保存的修改（对应老项目Form1_Closing的未保存判断）
         /// </summary>
-        public bool HasUnsavedEnvChanges()
-        {
+        public bool HasUnsavedEnvChanges() {
             var closedType = IsClosedExit ? Configs.ClosedTypeExit : Configs.ClosedTypeMin;
             return !string.Equals(JdkPath ?? string.Empty, JavaAppUtils.JdkPath ?? string.Empty)
                 || !string.Equals(SelectedProfile ?? string.Empty, JavaAppUtils.Profiles ?? string.Empty)
@@ -459,16 +414,13 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 重建设置页自启动列表（项目增删改后联动）
         /// </summary>
-        private void BuildAutoRunItems()
-        {
+        private void BuildAutoRunItems() {
             _buildingAutoRun = true;
             AutoRunItems.Clear();
-            foreach (var section in _appService.GetAllSections())
-            {
+            foreach (var section in _appService.GetAllSections()) {
                 var app = _appService.GetAppBySection(section);
                 if (app == null) continue;
-                var item = new AutoRunItemModel
-                {
+                var item = new AutoRunItemModel {
                     Section = app.Section,
                     Title = app.Title,
                     IsChecked = app.AutoRun,
@@ -483,15 +435,13 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 自启动项勾选变化：同步项目AutoRun并入库（对应老项目AutoRunCheckBox_CheckecChanged）
         /// </summary>
-        private void HandleAutoRunItemChanged(AutoRunItemModel item)
-        {
+        private void HandleAutoRunItemChanged(AutoRunItemModel item) {
             var app = _appService.GetAppBySection(item.Section);
             if (app == null || app.AutoRun == item.IsChecked) return;
 
             app.AutoRun = item.IsChecked;
             var record = AppDbService.Instance.GetBySection(item.Section);
-            if (record != null)
-            {
+            if (record != null) {
                 record.AutoRun = item.IsChecked;
                 AppDbService.Instance.SaveApp(record);
             }
@@ -502,36 +452,28 @@ namespace AppManager2.ViewModels
             _buildingAutoRun = false;
         }
 
-        private void OnBrowseJdk(object obj)
-        {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
+        private void OnBrowseJdk(object obj) {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog {
                 Description = "选择JDK目录",
                 ShowNewFolderButton = false
             };
-            if (!string.IsNullOrEmpty(JdkPath) && Directory.Exists(JdkPath))
-            {
+            if (!string.IsNullOrEmpty(JdkPath) && Directory.Exists(JdkPath)) {
                 dialog.SelectedPath = JdkPath;
             }
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
                 JdkPath = dialog.SelectedPath;
             }
         }
 
-        private void OnBrowseLog(object obj)
-        {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
+        private void OnBrowseLog(object obj) {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog {
                 Description = "选择日志目录",
                 ShowNewFolderButton = true
             };
-            if (!string.IsNullOrEmpty(LogPath) && Directory.Exists(LogPath))
-            {
+            if (!string.IsNullOrEmpty(LogPath) && Directory.Exists(LogPath)) {
                 dialog.SelectedPath = LogPath;
             }
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
                 LogPath = dialog.SelectedPath;
             }
         }
@@ -540,8 +482,7 @@ namespace AppManager2.ViewModels
 
         #region 应用树构建
 
-        private void BuildTree()
-        {
+        private void BuildTree() {
             AppTree.Clear();
 
             var allApps = _appService.GetAllSectionDic();
@@ -552,17 +493,14 @@ namespace AppManager2.ViewModels
                 .OrderBy(s => _appService.GetAppBySection(s)?.Sort ?? 0)
                 .ToList();
 
-            foreach (var group in groupList)
-            {
+            foreach (var group in groupList) {
                 var groupNode = CreateGroupNode(group);
                 // 恢复上次关闭前的收缩状态（名单外的组默认展开）
                 groupNode.IsExpanded = !collapsedGroups.Contains(group);
 
-                foreach (var section in orderedSections)
-                {
+                foreach (var section in orderedSections) {
                     var app = _appService.GetAppBySection(section);
-                    if (app != null && app.Group == group)
-                    {
+                    if (app != null && app.Group == group) {
                         groupNode.Children.Add(CreateChildNode(app, group));
                     }
                 }
@@ -571,18 +509,15 @@ namespace AppManager2.ViewModels
             }
 
             // 添加未分组的应用
-            foreach (var section in orderedSections)
-            {
+            foreach (var section in orderedSections) {
                 var app = _appService.GetAppBySection(section);
-                if (app != null && string.IsNullOrEmpty(app.Group))
-                {
+                if (app != null && string.IsNullOrEmpty(app.Group)) {
                     AppTree.Add(CreateChildNode(app, null));
                 }
             }
 
             // 刷新组节点聚合颜色
-            foreach (var group in groupList)
-            {
+            foreach (var group in groupList) {
                 UpdateGroupNodeColor(group);
             }
 
@@ -594,70 +529,54 @@ namespace AppManager2.ViewModels
         /// 增量同步应用树（AppListChanged时调用）：已有节点实例保留（组的展开/收缩状态不丢），
         /// 只新增/更新变化的节点、移除已删除的节点，不全量重建
         /// </summary>
-        private void SyncTree()
-        {
+        private void SyncTree() {
             var dic = _appService.GetAllSectionDic();
             var groupList = _appService.GroupList ?? new List<string>();
 
             // 现有子节点索引：section → (节点, 所在集合)
             var existIndex = new Dictionary<string, TreeItemModel>();
             var parentIndex = new Dictionary<TreeItemModel, System.Collections.IList>();
-            foreach (var groupNode in AppTree)
-            {
-                if (groupNode.Flag == Configs.NodeFlagGroup)
-                {
-                    foreach (var child in groupNode.Children)
-                    {
+            foreach (var groupNode in AppTree) {
+                if (groupNode.Flag == Configs.NodeFlagGroup) {
+                    foreach (var child in groupNode.Children) {
                         existIndex[child.Section] = child;
                         parentIndex[child] = groupNode.Children;
                     }
-                }
-                else if (groupNode.Section != null)
-                {
+                } else if (groupNode.Section != null) {
                     existIndex[groupNode.Section] = groupNode;
                     parentIndex[groupNode] = AppTree;
                 }
             }
 
             // 1. 移除已删除的section节点
-            foreach (var entry in existIndex.ToList())
-            {
-                if (!dic.ContainsKey(entry.Key))
-                {
-                    if (parentIndex[entry.Value] is ObservableCollection<TreeItemModel> parent)
-                    {
+            foreach (var entry in existIndex.ToList()) {
+                if (!dic.ContainsKey(entry.Key)) {
+                    if (parentIndex[entry.Value] is ObservableCollection<TreeItemModel> parent) {
                         parent.Remove(entry.Value);
                     }
                 }
             }
 
             // 2. 移除已不在组集合中的组节点（清空场景；组内项目删空但组还在GroupList中时保留，与老版一致）
-            foreach (var groupNode in AppTree.ToList())
-            {
-                if (groupNode.Flag == Configs.NodeFlagGroup && !groupList.Contains(groupNode.GroupName))
-                {
+            foreach (var groupNode in AppTree.ToList()) {
+                if (groupNode.Flag == Configs.NodeFlagGroup && !groupList.Contains(groupNode.GroupName)) {
                     AppTree.Remove(groupNode);
                 }
             }
 
             // 3. 逐个更新/新增当前项目
-            foreach (var section in _appService.GetAllSections())
-            {
+            foreach (var section in _appService.GetAllSections()) {
                 var app = _appService.GetAppBySection(section);
                 if (app == null) continue;
 
                 // 计算目标父集合（有组→组节点子级，无组→根）
                 ObservableCollection<TreeItemModel> targetParent;
                 TreeItemModel targetGroupNode = null;
-                if (string.IsNullOrEmpty(app.Group))
-                {
+                if (string.IsNullOrEmpty(app.Group)) {
                     targetParent = AppTree;
-                }
-                else
-                {
+                } else {
                     targetGroupNode = AppTree.FirstOrDefault(n => n.Flag == Configs.NodeFlagGroup && n.GroupName == app.Group);
-                    if (targetGroupNode == null)
-                    {
+                    if (targetGroupNode == null) {
                         // 新组：创建组节点并追加（对应老项目Init2Tree中按需添加组节点）
                         targetGroupNode = CreateGroupNode(app.Group);
                         AppTree.Add(targetGroupNode);
@@ -665,31 +584,25 @@ namespace AppManager2.ViewModels
                     targetParent = targetGroupNode.Children;
                 }
 
-                if (existIndex.TryGetValue(app.Section, out var node))
-                {
+                if (existIndex.TryGetValue(app.Section, out var node)) {
                     // 已存在：原地更新属性；换组时搬移节点（保留节点实例，不影响其它组展开状态）
                     UpdateChildNode(node, app);
-                    if (parentIndex[node] is ObservableCollection<TreeItemModel> oldParent && oldParent != targetParent)
-                    {
+                    if (parentIndex[node] is ObservableCollection<TreeItemModel> oldParent && oldParent != targetParent) {
                         oldParent.Remove(node);
                         targetParent.Add(node);
                     }
-                }
-                else
-                {
+                } else {
                     // 新增：追加到目标集合末尾（对应老项目Init2Tree的添加位置）
                     targetParent.Add(CreateChildNode(app, app.Group));
                     // 新项目所在的组若处于收缩状态，展开该组让新项目可见；其它组保持不变
-                    if (targetGroupNode != null)
-                    {
+                    if (targetGroupNode != null) {
                         targetGroupNode.IsExpanded = true;
                     }
                 }
             }
 
             // 刷新组节点聚合颜色
-            foreach (var group in groupList)
-            {
+            foreach (var group in groupList) {
                 UpdateGroupNodeColor(group);
             }
 
@@ -702,26 +615,19 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 读取上次关闭前处于收缩状态的组名单（System.ini [app] tree_collapsed，|分隔）
         /// </summary>
-        private HashSet<string> LoadCollapsedGroups()
-        {
+        private HashSet<string> LoadCollapsedGroups() {
             var set = new HashSet<string>();
-            try
-            {
+            try {
                 var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
                 var collapsed = iniData[Configs.IniSectionApp][Configs.IniKeyAppTreeCollapsed];
-                if (!string.IsNullOrEmpty(collapsed))
-                {
-                    foreach (var name in collapsed.Split('|'))
-                    {
-                        if (!string.IsNullOrEmpty(name))
-                        {
+                if (!string.IsNullOrEmpty(collapsed)) {
+                    foreach (var name in collapsed.Split('|')) {
+                        if (!string.IsNullOrEmpty(name)) {
                             set.Add(name);
                         }
                     }
                 }
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 // 读取失败按全部展开处理
             }
             return set;
@@ -730,19 +636,15 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 保存当前收缩的组名单（关闭程序前由窗口调用）
         /// </summary>
-        public void SaveTreeExpandState()
-        {
-            try
-            {
+        public void SaveTreeExpandState() {
+            try {
                 var collapsed = AppTree
                     .Where(n => n.Flag == Configs.NodeFlagGroup && !n.IsExpanded && !string.IsNullOrEmpty(n.GroupName))
                     .Select(n => n.GroupName)
                     .ToList();
                 IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionApp,
                     Configs.IniKeyAppTreeCollapsed, string.Join("|", collapsed));
-            }
-            catch (Exception)
-            {
+            } catch (Exception) {
                 // 保存失败不影响关闭流程
             }
         }
@@ -753,18 +655,13 @@ namespace AppManager2.ViewModels
         /// 序号与项目当前Sort一致且分组未变化的项目跳过，只update实际变化的项目；
         /// 直接写缓存和数据库，不触发AppListChanged，避免增量同步干扰手动排序结果
         /// </summary>
-        public void SaveTreeOrder()
-        {
-            try
-            {
+        public void SaveTreeOrder() {
+            try {
                 var sort = 1;
                 Walk(AppTree);
-                void Walk(IEnumerable<TreeItemModel> nodes)
-                {
-                    foreach (var node in nodes)
-                    {
-                        if (Configs.NodeFlagGroup.Equals(node.Flag))
-                        {
+                void Walk(IEnumerable<TreeItemModel> nodes) {
+                    foreach (var node in nodes) {
+                        if (Configs.NodeFlagGroup.Equals(node.Flag)) {
                             Walk(node.Children);
                             continue;
                         }
@@ -774,8 +671,7 @@ namespace AppManager2.ViewModels
                         if (app == null) continue;
 
                         var newGroup = node.GroupName ?? string.Empty;
-                        if (app.Sort == sort && string.Equals(app.Group ?? string.Empty, newGroup))
-                        {
+                        if (app.Sort == sort && string.Equals(app.Group ?? string.Empty, newGroup)) {
                             // 序号与分组都没变，无需update
                             sort++;
                             continue;
@@ -786,27 +682,22 @@ namespace AppManager2.ViewModels
                         _appService.UpdateAppSection(app.Section, app);
 
                         var record = AppDbService.Instance.GetBySection(app.Section);
-                        if (record != null)
-                        {
+                        if (record != null) {
                             record.Sort = app.Sort;
                             record.Group = app.Group;
                             AppDbService.Instance.SaveApp(record);
                         }
                     }
                 }
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 MessageBox.Show($"排序保存失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         #endregion
 
-        private TreeItemModel CreateGroupNode(string group)
-        {
-            return new TreeItemModel
-            {
+        private TreeItemModel CreateGroupNode(string group) {
+            return new TreeItemModel {
                 Name = group,
                 Flag = Configs.NodeFlagGroup,
                 ImageKey = Configs.GroupNodeImageKey,
@@ -822,8 +713,7 @@ namespace AppManager2.ViewModels
         }
 
         /// <summary>编辑后原地更新节点属性（不动节点实例，展开状态/选中不受影响）</summary>
-        private void UpdateChildNode(TreeItemModel node, AppSection app)
-        {
+        private void UpdateChildNode(TreeItemModel node, AppSection app) {
             node.Name = app.Title;
             node.ImageKey = GetImageKey(app.Type);
             node.Icon = GetNodeIcon(app);
@@ -835,10 +725,8 @@ namespace AppManager2.ViewModels
             node.BackgroundBrush = GetStatBrush(app.RunStat);
         }
 
-        private TreeItemModel CreateChildNode(AppSection app, string group)
-        {
-            return new TreeItemModel
-            {
+        private TreeItemModel CreateChildNode(AppSection app, string group) {
+            return new TreeItemModel {
                 Name = app.Title,
                 Flag = Configs.NodeFlagChild,
                 Section = app.Section,
@@ -861,10 +749,8 @@ namespace AppManager2.ViewModels
             };
         }
 
-        private string GetImageKey(string type)
-        {
-            return type switch
-            {
+        private string GetImageKey(string type) {
+            return type switch {
                 Configs.AppTypeJava => Configs.ChildNodeJavaImageKey,
                 Configs.AppTypeBat => Configs.ChildNodeBatImageKey,
                 Configs.AppTypeExe => Configs.ChildNodeExeImageKey,
@@ -872,15 +758,12 @@ namespace AppManager2.ViewModels
             };
         }
 
-        private ImageSource GetNodeIcon(AppSection app)
-        {
-            if (Configs.AppTypeExe.Equals(app.Type))
-            {
+        private ImageSource GetNodeIcon(AppSection app) {
+            if (Configs.AppTypeExe.Equals(app.Type)) {
                 // exe类型优先使用exe内嵌图标（对应老项目ExeIconUtils.GetIconImage）
                 return ExeIconUtils.GetIconImage(app.App) ?? ExeDefaultIcon;
             }
-            return app.Type switch
-            {
+            return app.Type switch {
                 Configs.AppTypeJava => JavaIcon,
                 Configs.AppTypeBat => BatIcon,
                 _ => ExeDefaultIcon
@@ -890,13 +773,10 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 按section查找树节点（含组内子节点）
         /// </summary>
-        private TreeItemModel FindNodeBySection(string section)
-        {
-            foreach (var node in AppTree)
-            {
+        private TreeItemModel FindNodeBySection(string section) {
+            foreach (var node in AppTree) {
                 if (node.Section == section) return node;
-                foreach (var child in node.Children)
-                {
+                foreach (var child in node.Children) {
                     if (child.Section == section) return child;
                 }
             }
@@ -906,10 +786,8 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 运行状态对应节点背景色（对应老项目FreshAppColor）
         /// </summary>
-        private Brush GetStatBrush(short runStat)
-        {
-            return runStat switch
-            {
+        private Brush GetStatBrush(short runStat) {
+            return runStat switch {
                 Configs.AppRunStatRunning => StatRunningBrush,
                 Configs.AppRunStatStopping => StatRunningBrush,
                 Configs.AppRunStatSuccess => StatSuccessBrush,
@@ -922,33 +800,28 @@ namespace AppManager2.ViewModels
 
         #region 应用增删改查
 
-        private void OnAddApp(object obj)
-        {
+        private void OnAddApp(object obj) {
             var window = new Views.AppFormWindow();
             window.SetOperateType(Configs.OperateTypeAdd);
             window.Owner = Application.Current.MainWindow;
             window.ShowDialog();
         }
 
-        private TreeItemModel GetNode(object obj)
-        {
+        private TreeItemModel GetNode(object obj) {
             // 右键菜单传节点参数；工具栏按钮走当前选中节点
             return obj as TreeItemModel ?? SelectedApp;
         }
 
-        private void OnEditApp(object obj)
-        {
+        private void OnEditApp(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
 
             var app = _appService.GetAppBySection(node.Section);
-            if (app != null && app.RunStat == Configs.AppRunStatSuccess)
-            {
+            if (app != null && app.RunStat == Configs.AppRunStatSuccess) {
                 // 当任务在运行时进行提醒（对应老项目BtnRightUpdateClick）
                 if (MessageBoxResult.Cancel == MessageBox.Show("任务运行中，端口和驱动修改会影响程序停止，确认继续编辑?", "警告",
-                    MessageBoxButton.OKCancel, MessageBoxImage.Warning))
-                {
+                    MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
                     return;
                 }
             }
@@ -959,8 +832,7 @@ namespace AppManager2.ViewModels
             window.ShowDialog();
         }
 
-        private void OnDeleteApp(object obj)
-        {
+        private void OnDeleteApp(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
@@ -968,24 +840,19 @@ namespace AppManager2.ViewModels
             var result = MessageBox.Show($"确认删除{node.Name}？", "警告",
                 MessageBoxButton.OKCancel, MessageBoxImage.Question);
 
-            if (result == MessageBoxResult.OK)
-            {
-                try
-                {
+            if (result == MessageBoxResult.OK) {
+                try {
                     _appService.DeleteFromDb(node.Section);
                     JavaAppUtils.RemoveBat(node.Name);
                     CloseTabBySection(node.Section);
                     ShowMessage($"{node.Name}删除成功！", Brushes.DarkOrange);
-                }
-                catch (System.Exception ex)
-                {
+                } catch (System.Exception ex) {
                     MessageBox.Show($"删除失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
             }
         }
 
-        private void OnDetailApp(object obj)
-        {
+        private void OnDetailApp(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
@@ -996,8 +863,7 @@ namespace AppManager2.ViewModels
             window.ShowDialog();
         }
 
-        private void OnWarnSwitchApp(object obj)
-        {
+        private void OnWarnSwitchApp(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
@@ -1009,29 +875,25 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 设置应用警报开关并同步到数据库和树节点
         /// </summary>
-        private void SetNodeWarn(TreeItemModel node, bool isWarn)
-        {
+        private void SetNodeWarn(TreeItemModel node, bool isWarn) {
             var app = _appService.GetAppBySection(node.Section);
             if (app == null) return;
 
             app.IsWarn = isWarn;
             var record = AppDbService.Instance.GetBySection(app.Section);
-            if (record != null)
-            {
+            if (record != null) {
                 record.IsWarn = isWarn;
                 AppDbService.Instance.SaveApp(record);
             }
             node.IsWarn = isWarn;
         }
 
-        private void OnLocateFile(object obj)
-        {
+        private void OnLocateFile(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
             var app = _appService.GetAppBySection(node.Section);
-            if (app == null || string.IsNullOrEmpty(app.App) || !File.Exists(app.App))
-            {
+            if (app == null || string.IsNullOrEmpty(app.App) || !File.Exists(app.App)) {
                 MessageBox.Show("应用文件不存在", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
@@ -1041,8 +903,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 节点刷新：重新生成java应用对应的启动/停止bat脚本（对应老项目CheckSection forceUpdate）
         /// </summary>
-        private void OnFreshBat(object obj)
-        {
+        private void OnFreshBat(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
@@ -1057,8 +918,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 重新生成bat脚本，成功返回null，失败返回错误信息
         /// </summary>
-        private string ReCreateBat(TreeItemModel node)
-        {
+        private string ReCreateBat(TreeItemModel node) {
             var app = _appService.GetAppBySection(node.Section);
             if (app == null)
                 return $"项目[{node.Name}]未找到";
@@ -1079,8 +939,7 @@ namespace AppManager2.ViewModels
 
         #region 应用启动/停止（对应老项目EventService + CliWrapUtils.AppStart/AppStop）
 
-        private void OnStartApp(object obj)
-        {
+        private void OnStartApp(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
@@ -1088,16 +947,14 @@ namespace AppManager2.ViewModels
             var app = _appService.GetAppBySection(node.Section);
             if (app == null) return;
 
-            if (app.RunStat == Configs.AppRunStatSuccess || app.RunStat == Configs.AppRunStatRunning)
-            {
+            if (app.RunStat == Configs.AppRunStatSuccess || app.RunStat == Configs.AppRunStatRunning) {
                 MessageBox.Show("项目不可重复启动!", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             StartApp(app, true);
         }
 
-        private void OnStopApp(object obj)
-        {
+        private void OnStopApp(object obj) {
             var node = GetNode(obj);
             if (node == null || string.IsNullOrEmpty(node.Section))
                 return;
@@ -1111,8 +968,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 启动应用：状态置为启动中，创建运行Tab并执行进程（对应老项目BtnRightStartClick + CliWrapUtils.AppStart）
         /// </summary>
-        private void StartApp(AppSection app, bool selectTab)
-        {
+        private void StartApp(AppSection app, bool selectTab) {
             app.RunStat = Configs.AppRunStatRunning;
             UpdateRunStat(app.Section, Configs.AppRunStatRunning, app.IsRunning);
             EnsureTab(app, selectTab);
@@ -1122,8 +978,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 自启动（监控初始化时触发，状态已由监控置为启动中）
         /// </summary>
-        private void AutoStartApp(AppSection app)
-        {
+        private void AutoStartApp(AppSection app) {
             EnsureTab(app, true);
             _runService.StartApp(app);
         }
@@ -1133,35 +988,27 @@ namespace AppManager2.ViewModels
         /// 配置了actuator地址的先调用监控的shutdown接口，失败时询问是否改用脚本停止；
         /// 未配置的直接走脚本/进程停止
         /// </summary>
-        private async void StopApp(AppSection app)
-        {
+        private async void StopApp(AppSection app) {
             // 状态设置为停止中
             app.RunStat = Configs.AppRunStatStopping;
             UpdateRunStat(app.Section, Configs.AppRunStatStopping, app.IsRunning);
             EnsureTab(app, true);
 
-            if (!string.IsNullOrEmpty(app.Actuator))
-            {
+            if (!string.IsNullOrEmpty(app.Actuator)) {
                 var shutDownUrl = (app.Actuator.EndsWith(Configs.PathCharacter) ? app.Actuator : app.Actuator + Configs.PathCharacter) + Configs.ActuatorShutdown;
-                try
-                {
+                try {
                     // actuator请求要使用post，使用默认的application/json方式请求
                     await Task.Run(() => { HttpUtils.PostRequest(shutDownUrl, null, null); });
-                }
-                catch (System.Exception ex)
-                {
+                } catch (System.Exception ex) {
                     Debug.WriteLine(ex.StackTrace);
                     if (MessageBoxResult.OK == MessageBox.Show("监控/shutdown无法请求,使用脚本停止？", "提醒",
-                        MessageBoxButton.OKCancel, MessageBoxImage.Warning))
-                    {
+                        MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
                         ScriptStop(app);
                     }
                     return;
                 }
                 // shutdown请求成功，等待监控确认停止
-            }
-            else
-            {
+            } else {
                 ScriptStop(app);
             }
         }
@@ -1169,32 +1016,27 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 脚本停止：先结束跟踪中的进程，再执行停止脚本/exe按进程名杀（对应老项目CliWrapUtils.AppStop）
         /// </summary>
-        private void ScriptStop(AppSection app)
-        {
+        private void ScriptStop(AppSection app) {
             EnsureTab(app, true);
             _runService.StopApp(app);
         }
 
-        private void OnGroupStart(object obj)
-        {
+        private void OnGroupStart(object obj) {
             if (!(obj is TreeItemModel group))
                 return;
 
-            foreach (var child in group.Children.ToList())
-            {
+            foreach (var child in group.Children.ToList()) {
                 var app = _appService.GetAppBySection(child.Section);
                 if (app == null || app.RunStat == Configs.AppRunStatSuccess || app.RunStat == Configs.AppRunStatRunning) continue;
                 StartApp(app, false);
             }
         }
 
-        private void OnGroupStop(object obj)
-        {
+        private void OnGroupStop(object obj) {
             if (!(obj is TreeItemModel group))
                 return;
 
-            foreach (var child in group.Children.ToList())
-            {
+            foreach (var child in group.Children.ToList()) {
                 var app = _appService.GetAppBySection(child.Section);
                 if (app == null || app.RunStat != Configs.AppRunStatSuccess) continue;
                 StopApp(app);
@@ -1204,21 +1046,17 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 项目全部操作：确认后按状态过滤批量启动/停止（对应老项目AllAppOperate）
         /// </summary>
-        private void OnAllStart(object obj)
-        {
+        private void OnAllStart(object obj) {
             AllAppOperate(Configs.ProjectOperateTypeStart);
         }
 
-        private void OnAllStop(object obj)
-        {
+        private void OnAllStop(object obj) {
             AllAppOperate(Configs.ProjectOperateTypeStop);
         }
 
-        private void AllAppOperate(int type)
-        {
+        private void AllAppOperate(int type) {
             var sectionDic = _appService.GetAllSectionDic();
-            if (null == sectionDic || 0 == sectionDic.Count)
-            {
+            if (null == sectionDic || 0 == sectionDic.Count) {
                 MessageBox.Show("项目配置为空，请先添加项目", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
@@ -1227,18 +1065,14 @@ namespace AppManager2.ViewModels
             if (MessageBox.Show(operateMsg, "信息", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
 
-            foreach (var entry in sectionDic)
-            {
+            foreach (var entry in sectionDic) {
                 var app = entry.Value;
                 if (null == app) continue;
 
-                if (Configs.ProjectOperateTypeStart == type && (Configs.AppRunStatUnrun == app.RunStat || Configs.AppRunStatFail == app.RunStat))
-                {
+                if (Configs.ProjectOperateTypeStart == type && (Configs.AppRunStatUnrun == app.RunStat || Configs.AppRunStatFail == app.RunStat)) {
                     // 项目状态为未运行或运行失败才可运行
                     StartApp(app, false);
-                }
-                else if (Configs.ProjectOperateTypeStop == type && Configs.AppRunStatSuccess == app.RunStat)
-                {
+                } else if (Configs.ProjectOperateTypeStop == type && Configs.AppRunStatSuccess == app.RunStat) {
                     // 项目状态必须为运行中
                     StopApp(app);
                 }
@@ -1252,13 +1086,10 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 获取应用对应的运行Tab，不存在时创建（对应老项目CreateAppRunTabPage）
         /// </summary>
-        private AppRunTabItemModel EnsureTab(AppSection app, bool select)
-        {
+        private AppRunTabItemModel EnsureTab(AppSection app, bool select) {
             var tab = RunningApps.FirstOrDefault(t => t.Section == app.Section);
-            if (tab == null)
-            {
-                tab = new AppRunTabItemModel
-                {
+            if (tab == null) {
+                tab = new AppRunTabItemModel {
                     Section = app.Section,
                     Title = app.Title,
                     IsRunning = app.IsRunning,
@@ -1266,27 +1097,23 @@ namespace AppManager2.ViewModels
                 };
                 RunningApps.Add(tab);
             }
-            if (select)
-            {
+            if (select) {
                 SelectedTabIndex = RunningApps.IndexOf(tab);
             }
             return tab;
         }
 
-        private AppRunTabItemModel FindTab(string section)
-        {
+        private AppRunTabItemModel FindTab(string section) {
             return RunningApps.FirstOrDefault(t => t.Section == section);
         }
 
         /// <summary>
         /// 追加运行日志，Tab不存在时自动创建（对应老项目监控中找不到TabPage则创建）
         /// </summary>
-        private void AppendTabLog(string section, string line)
-        {
+        private void AppendTabLog(string section, string line) {
             var app = _appService.GetAppBySection(section);
             var tab = FindTab(section);
-            if (tab == null)
-            {
+            if (tab == null) {
                 if (app == null) return;
                 tab = EnsureTab(app, false);
             }
@@ -1296,11 +1123,9 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 单击树节点时选中对应的运行Tab（对应老项目AppTreeView_NodeMouseClick）
         /// </summary>
-        public void SelectRunTab(string section)
-        {
+        public void SelectRunTab(string section) {
             var tab = FindTab(section);
-            if (tab != null)
-            {
+            if (tab != null) {
                 SelectedTabIndex = RunningApps.IndexOf(tab);
             }
         }
@@ -1309,26 +1134,20 @@ namespace AppManager2.ViewModels
         /// 关闭Tab：运行中先确认停止（Tab保留，等监控确认停止后再关），已停止的直接移除
         /// （对应老项目AppRunTabControl_MouseDown的关闭区域点击）
         /// </summary>
-        private void OnCloseTab(object obj)
-        {
+        private void OnCloseTab(object obj) {
             if (!(obj is AppRunTabItemModel tabItem))
                 return;
 
             var app = _appService.GetAppBySection(tabItem.Section);
             var isRunning = (app != null && app.IsRunning) || _runService.IsProcessAlive(tabItem.Section);
-            if (isRunning)
-            {
+            if (isRunning) {
                 if (MessageBoxResult.OK == MessageBox.Show("确认停止该程序？", "警告",
-                    MessageBoxButton.OKCancel, MessageBoxImage.Warning))
-                {
-                    if (app != null)
-                    {
+                    MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
+                    if (app != null) {
                         StopApp(app);
                     }
                 }
-            }
-            else
-            {
+            } else {
                 RunningApps.Remove(tabItem);
             }
         }
@@ -1336,34 +1155,26 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 关闭所有已停止的运行Tab（对应老项目AppRunTab_AllStopedClose）
         /// </summary>
-        private void OnCloseStoppedTabs(object obj)
-        {
+        private void OnCloseStoppedTabs(object obj) {
             var closeTabs = RunningApps
-                .Where(t =>
-                {
+                .Where(t => {
                     var app = _appService.GetAppBySection(t.Section);
                     return (app == null || !app.IsRunning) && !_runService.IsProcessAlive(t.Section);
                 })
                 .ToList();
-            foreach (var tab in closeTabs)
-            {
+            foreach (var tab in closeTabs) {
                 RunningApps.Remove(tab);
             }
-            if (closeTabs.Count > 0)
-            {
+            if (closeTabs.Count > 0) {
                 ShowMessage($"成功关闭{closeTabs.Count}个", Brushes.Green);
-            }
-            else
-            {
+            } else {
                 ShowMessage("当前无可关闭项", Brushes.DeepPink);
             }
         }
 
-        private void CloseTabBySection(string section)
-        {
+        private void CloseTabBySection(string section) {
             var tab = FindTab(section);
-            if (tab != null)
-            {
+            if (tab != null) {
                 RunningApps.Remove(tab);
             }
         }
@@ -1371,16 +1182,14 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 运行Tab底部输入框回车：向进程stdin发送输入（对应老项目ExecuteApp的KeyDown处理）
         /// </summary>
-        private void OnSendInput(object obj)
-        {
+        private void OnSendInput(object obj) {
             if (!(obj is AppRunTabItemModel tabItem))
                 return;
 
             var input = tabItem.InputText;
             if (string.IsNullOrEmpty(input)) return;
 
-            if (_runService.SendInput(tabItem.Section, input))
-            {
+            if (_runService.SendInput(tabItem.Section, input)) {
                 tabItem.AppendLog($"> {input}");
                 tabItem.InputText = string.Empty;
             }
@@ -1393,23 +1202,19 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 应用运行状态变化：同步树节点颜色/状态、运行Tab的运行标记、组节点聚合色
         /// </summary>
-        private void UpdateRunStat(string section, short runStat, bool isRunning)
-        {
+        private void UpdateRunStat(string section, short runStat, bool isRunning) {
             var app = _appService.GetAppBySection(section);
             var node = FindNodeBySection(section);
-            if (node != null)
-            {
+            if (node != null) {
                 node.RunStat = runStat;
                 node.IsRunning = isRunning;
                 node.BackgroundBrush = GetStatBrush(runStat);
             }
             var tab = FindTab(section);
-            if (tab != null)
-            {
+            if (tab != null) {
                 tab.IsRunning = isRunning;
             }
-            if (app != null)
-            {
+            if (app != null) {
                 UpdateGroupNodeColor(app.Group);
             }
             RelayCommand.Raise(StartAppCommand, StopAppCommand, EditAppCommand, DeleteAppCommand);
@@ -1418,8 +1223,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 组节点聚合色：按组内应用的运行状态汇总（对应老项目FreshAppColor的组节点部分）
         /// </summary>
-        private void UpdateGroupNodeColor(string group)
-        {
+        private void UpdateGroupNodeColor(string group) {
             if (string.IsNullOrEmpty(group)) return;
             var groupNode = AppTree.FirstOrDefault(n => n.Flag == Configs.NodeFlagGroup && n.GroupName == group);
             if (groupNode == null) return;
@@ -1428,11 +1232,9 @@ namespace AppManager2.ViewModels
             var runningNum = 0;
             var unrunNum = 0;
             var failNum = 0;
-            foreach (var app in appList)
-            {
+            foreach (var app in appList) {
                 if (app == null || !group.Equals(app.Group)) continue;
-                switch (app.RunStat)
-                {
+                switch (app.RunStat) {
                     case Configs.AppRunStatSuccess:
                         runningNum += 1;
                         break;
@@ -1446,23 +1248,15 @@ namespace AppManager2.ViewModels
             }
 
             Brush groupColor;
-            if (runningNum > 0)
-            {
-                if (failNum > 0)
-                {
+            if (runningNum > 0) {
+                if (failNum > 0) {
                     groupColor = GroupPinkBrush;
-                }
-                else if (unrunNum > 0)
-                {
+                } else if (unrunNum > 0) {
                     groupColor = GroupYellowBrush;
-                }
-                else
-                {
+                } else {
                     groupColor = StatSuccessBrush;
                 }
-            }
-            else
-            {
+            } else {
                 groupColor = failNum > 0 ? GroupYellowGreenBrush : StatUnrunBrush;
             }
             groupNode.BackgroundBrush = groupColor;
@@ -1472,8 +1266,7 @@ namespace AppManager2.ViewModels
 
         #region 组操作
 
-        private void OnGroupDelete(object obj)
-        {
+        private void OnGroupDelete(object obj) {
             if (!(obj is TreeItemModel group))
                 return;
 
@@ -1485,39 +1278,30 @@ namespace AppManager2.ViewModels
             // 项目是否可移除判定（对应老项目GroupBtnRightDeleteClick，运行中不可删除）
             var hasRun = false;
             var willDeleteSections = new List<string>();
-            foreach (var child in group.Children.ToList())
-            {
+            foreach (var child in group.Children.ToList()) {
                 var app = _appService.GetAppBySection(child.Section);
                 if (app == null) continue;
-                if (app.RunStat == Configs.AppRunStatSuccess)
-                {
+                if (app.RunStat == Configs.AppRunStatSuccess) {
                     hasRun = true;
-                }
-                else
-                {
+                } else {
                     willDeleteSections.Add(child.Section);
                 }
             }
 
-            if (hasRun)
-            {
+            if (hasRun) {
                 MessageBox.Show("当前项目正在运行中，不可删除！", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
 
-            try
-            {
-                foreach (var section in willDeleteSections)
-                {
+            try {
+                foreach (var section in willDeleteSections) {
                     var node = group.Children.FirstOrDefault(c => c.Section == section);
                     _appService.DeleteFromDb(section);
                     JavaAppUtils.RemoveBat(node?.Name ?? section);
                     CloseTabBySection(section);
                 }
                 ShowMessage($"{group.Name}删除成功！", Brushes.DarkOrange);
-            }
-            catch (System.Exception ex)
-            {
+            } catch (System.Exception ex) {
                 MessageBox.Show($"删除失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -1526,29 +1310,24 @@ namespace AppManager2.ViewModels
 
         private void OnGroupWarnOff(object obj) => SetGroupWarn(obj, false);
 
-        private void SetGroupWarn(object obj, bool isWarn)
-        {
+        private void SetGroupWarn(object obj, bool isWarn) {
             if (!(obj is TreeItemModel group))
                 return;
-            foreach (var child in group.Children)
-            {
+            foreach (var child in group.Children) {
                 SetNodeWarn(child, isWarn);
             }
             ShowMessage($"{(isWarn ? "开启" : "关闭")}组{group.Name}警告", Brushes.Orange);
         }
 
-        private void OnGroupFresh(object obj)
-        {
+        private void OnGroupFresh(object obj) {
             // 组刷新：对组内全部java应用重新生成bat
             if (!(obj is TreeItemModel group))
                 return;
 
             var errors = new StringBuilder();
-            foreach (var child in group.Children.ToList())
-            {
+            foreach (var child in group.Children.ToList()) {
                 var error = ReCreateBat(child);
-                if (error != null)
-                {
+                if (error != null) {
                     errors.AppendLine(error);
                 }
             }
@@ -1566,45 +1345,33 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 刷新所有启动脚本（对应老项目Fresh_Button_Click）
         /// </summary>
-        private void OnRefreshApp(object obj)
-        {
+        private void OnRefreshApp(object obj) {
             if (MessageBox.Show("确认刷新所有启动脚本吗？", "信息", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
                 return;
 
             var sectionDic = _appService.GetAllSectionDic();
-            if (null == sectionDic || 0 == sectionDic.Count)
-            {
+            if (null == sectionDic || 0 == sectionDic.Count) {
                 ShowMessage("当前无项目！", Brushes.Red);
                 return;
             }
 
-            try
-            {
+            try {
                 var errors = new StringBuilder();
-                foreach (var entry in sectionDic)
-                {
+                foreach (var entry in sectionDic) {
                     var app = entry.Value;
                     if (app == null) continue;
-                    try
-                    {
+                    try {
                         CheckSection(app, true);
-                    }
-                    catch (BusinessException ex)
-                    {
+                    } catch (BusinessException ex) {
                         errors.AppendLine(ex.Message);
                     }
                 }
-                if (errors.Length > 0)
-                {
+                if (errors.Length > 0) {
                     MessageBox.Show(errors.ToString(), "刷新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-                else
-                {
+                } else {
                     ShowMessage("刷新成功", Brushes.Green);
                 }
-            }
-            catch (System.Exception ex)
-            {
+            } catch (System.Exception ex) {
                 MessageBox.Show("系统异常:" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -1612,8 +1379,7 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 清除所有应用（对应老项目ClearAppButton_Click）：存在运行项目时二次确认（不会停止项目）
         /// </summary>
-        private void OnClearAll(object obj)
-        {
+        private void OnClearAll(object obj) {
             if (MessageBoxResult.OK != MessageBox.Show("确认清除所有项目?", "警告",
                 MessageBoxButton.OKCancel, MessageBoxImage.Warning))
                 return;
@@ -1621,24 +1387,18 @@ namespace AppManager2.ViewModels
             var sectionDic = _appService.GetAllSectionDic();
             if (sectionDic == null || sectionDic.Count == 0) return;
 
-            try
-            {
-                foreach (var entry in sectionDic)
-                {
+            try {
+                foreach (var entry in sectionDic) {
                     var app = entry.Value;
-                    if (app != null && app.IsRunning)
-                    {
+                    if (app != null && app.IsRunning) {
                         if (MessageBoxResult.OK == MessageBox.Show("存在运行项目，清空不会停止项目运行，确认继续清空?", "警告",
-                            MessageBoxButton.OKCancel, MessageBoxImage.Warning))
-                        {
+                            MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
                             break;
                         }
                         return;
                     }
                 }
-            }
-            catch (System.Exception ex)
-            {
+            } catch (System.Exception ex) {
                 MessageBox.Show(ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                 return;
             }
@@ -1648,10 +1408,8 @@ namespace AppManager2.ViewModels
             ShowMessage("清空成功", Brushes.Green);
         }
 
-        private void OnExportConfig(object obj)
-        {
-            var exportWindow = new Views.AppExportWindow
-            {
+        private void OnExportConfig(object obj) {
+            var exportWindow = new Views.AppExportWindow {
                 Owner = Application.Current.MainWindow
             };
             exportWindow.ShowDialog();
@@ -1660,53 +1418,42 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 导入.amp配置文件（对应老项目ImportButton_Click）：AES解密后按 标题+类型+路径+端口 判重，可选覆盖
         /// </summary>
-        private void OnImportConfig(object obj)
-        {
-            while (true)
-            {
+        private void OnImportConfig(object obj) {
+            while (true) {
                 var openFileDialog = new Microsoft.Win32.OpenFileDialog { Filter = @"Amp Files(*.amp)|*amp" };
                 if (openFileDialog.ShowDialog() != true) return;
 
                 Dictionary<string, AppSection> appSectionDic;
-                try
-                {
+                try {
                     var encryptContent = File.ReadAllText(openFileDialog.FileName, new UTF8Encoding(false));
                     var content = AesUtils.DecryptContent(encryptContent);
                     appSectionDic = JsonConvert.DeserializeObject<Dictionary<string, AppSection>>(content);
-                }
-                catch (System.Exception ex)
-                {
+                } catch (System.Exception ex) {
                     MessageBox.Show($"文件解析失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                     continue;
                 }
 
-                if (appSectionDic == null || appSectionDic.Count == 0)
-                {
+                if (appSectionDic == null || appSectionDic.Count == 0) {
                     MessageBox.Show(@"所选文件无配置项,请重新选择", @"提示", MessageBoxButton.OK, MessageBoxImage.Information);
                     continue;
                 }
 
                 string isOverride = null;
                 var importNum = 0;
-                foreach (var item in appSectionDic)
-                {
+                foreach (var item in appSectionDic) {
                     var app = item.Value;
                     if (app == null) continue;
                     var existSection = FindExistSection(app);
-                    if (!string.IsNullOrEmpty(existSection))
-                    {
+                    if (!string.IsNullOrEmpty(existSection)) {
                         // 存在重复，是否覆盖只询问一次
                         isOverride ??= MessageBoxResult.Yes == MessageBox.Show("存在相同配置，是否覆盖本地?", "警告",
                             MessageBoxButton.YesNo, MessageBoxImage.Warning) ? "true" : "false";
-                        if ("true".Equals(isOverride))
-                        {
+                        if ("true".Equals(isOverride)) {
                             app.Section = existSection;
                             SaveProject(app);
                             importNum++;
                         }
-                    }
-                    else
-                    {
+                    } else {
                         SaveProject(app);
                         importNum++;
                     }
@@ -1719,18 +1466,15 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 按标题+类型+路径+端口查找本地已存在的相同配置
         /// </summary>
-        private string FindExistSection(AppSection app)
-        {
-            foreach (var entry in _appService.GetAllSectionDic())
-            {
+        private string FindExistSection(AppSection app) {
+            foreach (var entry in _appService.GetAllSectionDic()) {
                 var exist = entry.Value;
                 if (exist == null) continue;
                 if (!string.IsNullOrEmpty(app.Title) && !string.IsNullOrEmpty(exist.Title)
                     && app.Title.Equals(exist.Title)
                     && app.Port != null && exist.Port != null && app.Port.Equals(exist.Port)
                     && !string.IsNullOrEmpty(app.App) && !string.IsNullOrEmpty(exist.App) && app.App.Equals(exist.App)
-                    && !string.IsNullOrEmpty(app.Type) && !string.IsNullOrEmpty(exist.Type) && app.Type.Equals(exist.Type))
-                {
+                    && !string.IsNullOrEmpty(app.Type) && !string.IsNullOrEmpty(exist.Type) && app.Type.Equals(exist.Type)) {
                     return entry.Key;
                 }
             }
@@ -1740,17 +1484,14 @@ namespace AppManager2.ViewModels
         /// <summary>
         /// 保存导入的项目：入库+更新缓存+生成java脚本（对应老项目SaveProject）
         /// </summary>
-        private void SaveProject(AppSection app)
-        {
+        private void SaveProject(AppSection app) {
             app.RunStat = Configs.AppRunStatUnrun;
             app.IsRunning = false;
             _appService.SaveToDb(app);
-            if (Configs.AppTypeJava.Equals(app.Type))
-            {
+            if (Configs.AppTypeJava.Equals(app.Type)) {
                 JavaAppUtils.LoadSettings();
                 var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
-                if (!bool.TrueString.Equals(result))
-                {
+                if (!bool.TrueString.Equals(result)) {
                     MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
@@ -1762,8 +1503,7 @@ namespace AppManager2.ViewModels
 
         #region 状态栏提示（对应老项目TimerUtils.ShowOperateLabelMessage）
 
-        public void ShowMessage(string message, Brush brush = null, int seconds = 5)
-        {
+        public void ShowMessage(string message, Brush brush = null, int seconds = 5) {
             OperateMessage = message;
             OperateMessageBrush = brush ?? Brushes.Black;
             _messageTimer.Stop();
@@ -1773,13 +1513,11 @@ namespace AppManager2.ViewModels
 
         #endregion
 
-        private void OnExpandAll(object obj)
-        {
+        private void OnExpandAll(object obj) {
             ExpandAllRequested?.Invoke();
         }
 
-        private void OnCollapseAll(object obj)
-        {
+        private void OnCollapseAll(object obj) {
             CollapseAllRequested?.Invoke();
         }
 

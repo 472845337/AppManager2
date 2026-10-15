@@ -11,11 +11,9 @@ using System.IO;
 using System.Text.RegularExpressions;
 using System.Windows;
 
-namespace AppManager2.ViewModels
-{
+namespace AppManager2.ViewModels {
     [AddINotifyPropertyChangedInterface]
-    public class AppFormViewModel : BaseViewModel
-    {
+    public class AppFormViewModel : BaseViewModel {
         public short OperateType { get; set; }
         public string Section { get; set; }
 
@@ -67,21 +65,18 @@ namespace AppManager2.ViewModels
         private Window _window;
 
         // 默认参数
-        private readonly Dictionary<string, string> _defaultJvmParams = new Dictionary<string, string>
-        {
+        private readonly Dictionary<string, string> _defaultJvmParams = new Dictionary<string, string> {
             ["-Xms"] = "-Xms128m",
             ["-Xmx"] = "-Xmx1024m",
             ["-XX:MetaspaceSize"] = "-XX:MetaspaceSize=32m",
             ["-Dfile.encoding"] = "-Dfile.encoding=utf-8"
         };
 
-        private readonly Dictionary<string, string> _defaultEnvParams = new Dictionary<string, string>
-        {
+        private readonly Dictionary<string, string> _defaultEnvParams = new Dictionary<string, string> {
             ["--spring.profiles.active"] = "--spring.profiles.active=prod"
         };
 
-        public AppFormViewModel()
-        {
+        public AppFormViewModel() {
             _appService = AppService.Instance;
 
             // 初始化集合
@@ -100,17 +95,14 @@ namespace AppManager2.ViewModels
             LoadGroups();
         }
 
-        public void SetWindow(Window window)
-        {
+        public void SetWindow(Window window) {
             _window = window;
         }
 
-        public void SetOperateType(short operateType, string section = null)
-        {
+        public void SetOperateType(short operateType, string section = null) {
             OperateType = operateType;
             RelayCommand.Raise(SaveCommand);
-            switch (operateType)
-            {
+            switch (operateType) {
                 case Configs.OperateTypeAdd:
                     WindowTitle = "添加应用";
                     break;
@@ -122,34 +114,27 @@ namespace AppManager2.ViewModels
                     break;
             }
 
-            if (operateType == Configs.OperateTypeUpdate || operateType == Configs.OperateTypeDetail)
-            {
-                if (!string.IsNullOrEmpty(section))
-                {
+            if (operateType == Configs.OperateTypeUpdate || operateType == Configs.OperateTypeDetail) {
+                if (!string.IsNullOrEmpty(section)) {
                     Section = section;
                     LoadApp(section);
                 }
             }
         }
 
-        private void LoadGroups()
-        {
+        private void LoadGroups() {
             Groups.Clear();
             var groupList = _appService.GroupList;
-            if (groupList != null)
-            {
-                foreach (var group in groupList)
-                {
+            if (groupList != null) {
+                foreach (var group in groupList) {
                     Groups.Add(group);
                 }
             }
         }
 
-        private void LoadApp(string section)
-        {
+        private void LoadApp(string section) {
             var app = _appService.GetAppBySection(section);
-            if (app != null)
-            {
+            if (app != null) {
                 Section = app.Section;
                 AppType = app.Type;
                 AppTitle = app.Title;
@@ -172,23 +157,19 @@ namespace AppManager2.ViewModels
             }
         }
 
-        private void OnSave(object obj)
-        {
+        private void OnSave(object obj) {
             var errorMsg = ValidateInput();
-            if (!string.IsNullOrEmpty(errorMsg))
-            {
+            if (!string.IsNullOrEmpty(errorMsg)) {
                 MessageBox.Show(errorMsg, "验证失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
-            try
-            {
+            try {
                 var section = OperateType == Configs.OperateTypeAdd
                     ? Guid.NewGuid().ToString()
                     : Section;
 
-                var appSection = new AppSection
-                {
+                var appSection = new AppSection {
                     Section = section,
                     Type = AppType,
                     Title = AppTitle?.Trim(),
@@ -216,54 +197,41 @@ namespace AppManager2.ViewModels
                 MessageBox.Show("保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 try { _window.DialogResult = true; } catch { /* 非模态打开时忽略 */ }
                 _window?.Close();
-            }
-            catch (Exception ex)
-            {
+            } catch (Exception ex) {
                 MessageBox.Show($"保存失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
-        private bool CanSave(object obj)
-        {
+        private bool CanSave(object obj) {
             return IsEditMode;
         }
 
-        private string ValidateInput()
-        {
+        private string ValidateInput() {
             var errors = new List<string>();
 
             // 名称必填
-            if (string.IsNullOrWhiteSpace(AppTitle))
-            {
+            if (string.IsNullOrWhiteSpace(AppTitle)) {
                 errors.Add("名称不能为空");
             }
 
             // 应用路径必填
-            if (string.IsNullOrWhiteSpace(AppPath))
-            {
+            if (string.IsNullOrWhiteSpace(AppPath)) {
                 errors.Add("应用路径不能为空");
             }
 
             // 根据类型验证
-            switch (AppType)
-            {
+            switch (AppType) {
                 case Configs.AppTypeJava:
                     // Java类型需要jar文件
-                    if (!string.IsNullOrEmpty(AppPath) && !AppPath.ToLower().EndsWith(".jar"))
-                    {
+                    if (!string.IsNullOrEmpty(AppPath) && !AppPath.ToLower().EndsWith(".jar")) {
                         errors.Add("Java类型必须选择.jar文件");
                     }
                     // 端口必填
-                    if (string.IsNullOrWhiteSpace(Port))
-                    {
+                    if (string.IsNullOrWhiteSpace(Port)) {
                         errors.Add("端口不能为空");
-                    }
-                    else if (!Regex.IsMatch(Port, @"^\d+$"))
-                    {
+                    } else if (!Regex.IsMatch(Port, @"^\d+$")) {
                         errors.Add("端口必须是数字");
-                    }
-                    else if (int.Parse(Port) > 65535)
-                    {
+                    } else if (int.Parse(Port) > 65535) {
                         errors.Add("端口不能大于65535");
                     }
                     break;
@@ -272,26 +240,22 @@ namespace AppManager2.ViewModels
                     // Bat类型需要.bat或.cmd文件
                     if (!string.IsNullOrEmpty(AppPath) &&
                         !AppPath.ToLower().EndsWith(".bat") &&
-                        !AppPath.ToLower().EndsWith(".cmd"))
-                    {
+                        !AppPath.ToLower().EndsWith(".cmd")) {
                         errors.Add("Bat类型必须选择.bat或.cmd文件");
                     }
                     // 终止脚本必填
-                    if (string.IsNullOrWhiteSpace(StopPath))
-                    {
+                    if (string.IsNullOrWhiteSpace(StopPath)) {
                         errors.Add("终止脚本路径不能为空");
                     }
                     // 端口或心跳必填其一
-                    if (string.IsNullOrWhiteSpace(Port) && string.IsNullOrWhiteSpace(HeartBeatUrl))
-                    {
+                    if (string.IsNullOrWhiteSpace(Port) && string.IsNullOrWhiteSpace(HeartBeatUrl)) {
                         errors.Add("端口和心跳必须填写其中一个");
                     }
                     break;
 
                 case Configs.AppTypeExe:
                     // Exe类型需要.exe文件
-                    if (!string.IsNullOrEmpty(AppPath) && !AppPath.ToLower().EndsWith(".exe"))
-                    {
+                    if (!string.IsNullOrEmpty(AppPath) && !AppPath.ToLower().EndsWith(".exe")) {
                         errors.Add("Exe类型必须选择.exe文件");
                     }
                     break;
@@ -300,19 +264,16 @@ namespace AppManager2.ViewModels
             return string.Join("\n", errors);
         }
 
-        private void SaveAppSection(AppSection appSection)
-        {
+        private void SaveAppSection(AppSection appSection) {
             // 保存到 SQLite（AppManager.db 的 t_app 表），并更新缓存、通知界面刷新
             _appService.SaveToDb(appSection);
 
             // java项目根据jar包地址生成对应的启动/停止bat脚本
-            if (Configs.AppTypeJava.Equals(appSection.Type))
-            {
+            if (Configs.AppTypeJava.Equals(appSection.Type)) {
                 JavaAppUtils.LoadSettings();
 
                 var result = JavaAppUtils.CreateStartBat(appSection, Configs.LogFileInfo, Configs.LogFileError);
-                if (!bool.TrueString.Equals(result))
-                {
+                if (!bool.TrueString.Equals(result)) {
                     // 应用信息已保存，脚本生成失败单独提示
                     MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
@@ -321,91 +282,73 @@ namespace AppManager2.ViewModels
             }
         }
 
-        private void OnClose(object obj)
-        {
+        private void OnClose(object obj) {
             _window?.Close();
         }
 
-        private void OnBrowseAppPath(object obj)
-        {
-            var filter = AppType switch
-            {
+        private void OnBrowseAppPath(object obj) {
+            var filter = AppType switch {
                 Configs.AppTypeJava => "Jar Files (*.jar)|*.jar|All Files (*.*)|*.*",
                 Configs.AppTypeBat => "Bat Files (*.bat)|*.bat|Cmd Files (*.cmd)|*.cmd|All Files (*.*)|*.*",
                 Configs.AppTypeExe => "Exe Files (*.exe)|*.exe|All Files (*.*)|*.*",
                 _ => "All Files (*.*)|*.*"
             };
 
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
+            var dialog = new Microsoft.Win32.OpenFileDialog {
                 Filter = filter,
                 Title = "选择应用文件"
             };
 
-            if (!string.IsNullOrEmpty(AppPath))
-            {
+            if (!string.IsNullOrEmpty(AppPath)) {
                 dialog.InitialDirectory = Path.GetDirectoryName(AppPath);
             }
 
-            if (dialog.ShowDialog() == true)
-            {
+            if (dialog.ShowDialog() == true) {
                 AppPath = dialog.FileName;
                 // 如果名称为空，自动填充名称
-                if (string.IsNullOrEmpty(AppTitle))
-                {
+                if (string.IsNullOrEmpty(AppTitle)) {
                     var fileName = Path.GetFileNameWithoutExtension(dialog.FileName);
                     AppTitle = fileName;
                 }
             }
         }
 
-        private void OnBrowseStopPath(object obj)
-        {
+        private void OnBrowseStopPath(object obj) {
             var filter = "Bat Files (*.bat)|*.bat|Cmd Files (*.cmd)|*.cmd|All Files (*.*)|*.*";
 
-            var dialog = new Microsoft.Win32.OpenFileDialog
-            {
+            var dialog = new Microsoft.Win32.OpenFileDialog {
                 Filter = filter,
                 Title = "选择停止脚本"
             };
 
-            if (!string.IsNullOrEmpty(StopPath))
-            {
+            if (!string.IsNullOrEmpty(StopPath)) {
                 dialog.InitialDirectory = Path.GetDirectoryName(StopPath);
             }
 
-            if (dialog.ShowDialog() == true)
-            {
+            if (dialog.ShowDialog() == true) {
                 StopPath = dialog.FileName;
             }
         }
 
-        private void OnBrowseJdkPath(object obj)
-        {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
-            {
+        private void OnBrowseJdkPath(object obj) {
+            var dialog = new System.Windows.Forms.FolderBrowserDialog {
                 Description = "选择JDK目录",
                 ShowNewFolderButton = false
             };
 
-            if (!string.IsNullOrEmpty(JdkPath) && Directory.Exists(JdkPath))
-            {
+            if (!string.IsNullOrEmpty(JdkPath) && Directory.Exists(JdkPath)) {
                 dialog.SelectedPath = JdkPath;
             }
 
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
+            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
                 JdkPath = dialog.SelectedPath;
             }
         }
 
-        private void OnDefaultJvm(object obj)
-        {
+        private void OnDefaultJvm(object obj) {
             var current = JvmParams ?? string.Empty;
-            foreach (var param in _defaultJvmParams)
-            {
-                if (!current.Contains(param.Key))
-                {
+            foreach (var param in _defaultJvmParams) {
+                if (!current.Contains(param.Key)) {
                     current = string.IsNullOrEmpty(current)
                         ? param.Value
                         : $"{current} {param.Value}";
@@ -414,13 +357,10 @@ namespace AppManager2.ViewModels
             JvmParams = current;
         }
 
-        private void OnDefaultEnv(object obj)
-        {
+        private void OnDefaultEnv(object obj) {
             var current = EnvParams ?? string.Empty;
-            foreach (var param in _defaultEnvParams)
-            {
-                if (!current.Contains(param.Key))
-                {
+            foreach (var param in _defaultEnvParams) {
+                if (!current.Contains(param.Key)) {
                     current = string.IsNullOrEmpty(current)
                         ? param.Value
                         : $"{current} {param.Value}";
@@ -429,10 +369,8 @@ namespace AppManager2.ViewModels
             EnvParams = current;
         }
 
-        public AppSection ToAppSection()
-        {
-            return new AppSection
-            {
+        public AppSection ToAppSection() {
+            return new AppSection {
                 Section = Section,
                 Type = AppType,
                 Title = AppTitle,
@@ -457,8 +395,7 @@ namespace AppManager2.ViewModels
             };
         }
 
-        public void FromAppSection(AppSection app)
-        {
+        public void FromAppSection(AppSection app) {
             Section = app.Section;
             AppType = app.Type;
             AppTitle = app.Title;

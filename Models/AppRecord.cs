@@ -1,10 +1,8 @@
 using AppManager2.CustomEnum;
 
-namespace AppManager2.Models
-{
+namespace AppManager2.Models {
     [Table("t_app")]
-    public class AppRecord : TableData
-    {
+    public class AppRecord : TableData {
         [TableParam("section", "VARCHAR")]
         public string Section { get; set; }
 

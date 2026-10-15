@@ -1,11 +1,9 @@
 using AppManager2.CustomEnum;
 using System.Collections.Generic;
 
-namespace AppManager2.Models
-{
+namespace AppManager2.Models {
     [Table("http_send")]
-    public class HttpSend : TableData
-    {
+    public class HttpSend : TableData {
         [TableParam("url", "VARCHAR")]
         public string Url { get; set; }
 

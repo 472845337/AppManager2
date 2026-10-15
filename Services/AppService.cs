@@ -7,10 +7,8 @@ using System.IO;
 using System.Linq;
 using Utils;
 
-namespace AppManager2.Services
-{
-    public class AppService
-    {
+namespace AppManager2.Services {
+    public class AppService {
         private static AppService _instance;
         public static AppService Instance => _instance ??= new AppService();
 
@@ -27,20 +25,16 @@ namespace AppManager2.Services
 
         public LinkedHashMap<string, AppSection> GetAllSectionDic() => _dictionary;
 
-        public AppSection GetAppBySection(string section)
-        {
+        public AppSection GetAppBySection(string section) {
             if (string.IsNullOrEmpty(section)) return null;
             return _dictionary.TryGetValue(section, out var app) ? app : null;
         }
 
-        public void RemoveAppBySection(string section)
-        {
-            if (_dictionary.ContainsKey(section))
-            {
+        public void RemoveAppBySection(string section) {
+            if (_dictionary.ContainsKey(section)) {
                 _dictionary.Remove(section);
             }
-            if (_sections.Contains(section))
-            {
+            if (_sections.Contains(section)) {
                 _sections.Remove(section);
             }
         }
@@ -48,8 +42,7 @@ namespace AppManager2.Services
         /// <summary>
         /// 从 SQLite 中删除应用，并更新内存缓存、触发变更事件
         /// </summary>
-        public void DeleteFromDb(string section)
-        {
+        public void DeleteFromDb(string section) {
             AppDbService.Instance.DeleteBySection(section);
             RemoveAppBySection(section);
             AppListChanged?.Invoke();
@@ -58,8 +51,7 @@ namespace AppManager2.Services
         /// <summary>
         /// 清空 SQLite 中的全部应用，并触发变更事件
         /// </summary>
-        public void ClearDb()
-        {
+        public void ClearDb() {
             AppDbService.Instance.Clear();
             _dictionary.Clear();
             _sections.Clear();
@@ -67,24 +59,19 @@ namespace AppManager2.Services
             AppListChanged?.Invoke();
         }
 
-        public void UpdateAppSection(string section, AppSection appSection)
-        {
+        public void UpdateAppSection(string section, AppSection appSection) {
             GroupList ??= new List<string>();
             _dictionary ??= new LinkedHashMap<string, AppSection>();
             _sections ??= new List<string>();
 
-            if (!string.IsNullOrEmpty(appSection.Group) && !GroupList.Contains(appSection.Group))
-            {
+            if (!string.IsNullOrEmpty(appSection.Group) && !GroupList.Contains(appSection.Group)) {
                 GroupList.Add(appSection.Group);
             }
 
             bool isExist = _dictionary.ContainsKey(section);
-            if (isExist)
-            {
+            if (isExist) {
                 _dictionary[section] = appSection;
-            }
-            else
-            {
+            } else {
                 _dictionary.Add(section, appSection);
                 _sections.Add(section);
             }
@@ -93,8 +80,7 @@ namespace AppManager2.Services
         /// <summary>
         /// 将应用保存到 SQLite（t_app 表），并更新内存缓存、触发变更事件
         /// </summary>
-        public void SaveToDb(AppSection appSection)
-        {
+        public void SaveToDb(AppSection appSection) {
             var record = ToRecord(appSection);
             AppDbService.Instance.SaveApp(record);
             UpdateAppSection(appSection.Section, appSection);
@@ -104,30 +90,25 @@ namespace AppManager2.Services
         /// <summary>
         /// 从 SQLite（t_app 表）加载全部应用；首次（表为空）时自动从 ini 迁移历史数据
         /// </summary>
-        public void LoadFromDb()
-        {
+        public void LoadFromDb() {
             _dictionary.Clear();
             _sections.Clear();
             GroupList = new List<string>();
 
             var records = AppDbService.Instance.GetAll();
 
-            if (records.Count == 0 && File.Exists(Configs.AppPath + "\\" + Configs.ProjectsIniPath))
-            {
+            if (records.Count == 0 && File.Exists(Configs.AppPath + "\\" + Configs.ProjectsIniPath)) {
                 // 首次使用：将 ini 中的历史数据迁移进 SQLite
                 LoadFromIni();
-                foreach (var section in _sections.ToList())
-                {
+                foreach (var section in _sections.ToList()) {
                     AppDbService.Instance.SaveApp(ToRecord(_dictionary[section]));
                 }
                 return;
             }
 
-            foreach (var record in records)
-            {
+            foreach (var record in records) {
                 var appSection = ToSection(record);
-                if (!string.IsNullOrEmpty(appSection.Group) && !GroupList.Contains(appSection.Group))
-                {
+                if (!string.IsNullOrEmpty(appSection.Group) && !GroupList.Contains(appSection.Group)) {
                     GroupList.Add(appSection.Group);
                 }
                 _dictionary.Add(appSection.Section, appSection);
@@ -135,10 +116,8 @@ namespace AppManager2.Services
             }
         }
 
-        private AppRecord ToRecord(AppSection app)
-        {
-            return new AppRecord
-            {
+        private AppRecord ToRecord(AppSection app) {
+            return new AppRecord {
                 Section = app.Section,
                 Type = app.Type,
                 Title = app.Title,
@@ -162,10 +141,8 @@ namespace AppManager2.Services
             };
         }
 
-        private AppSection ToSection(AppRecord record)
-        {
-            return new AppSection
-            {
+        private AppSection ToSection(AppRecord record) {
+            return new AppSection {
                 Section = record.Section,
                 Type = record.Type,
                 Title = record.Title,
@@ -191,18 +168,15 @@ namespace AppManager2.Services
             };
         }
 
-        public void LoadFromIni()
-        {
+        public void LoadFromIni() {
             var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.ProjectsIniPath);
 
             _dictionary.Clear();
             _sections.Clear();
             GroupList = new List<string>();
 
-            foreach (var section in iniData.Sections)
-            {
-                var appSection = new AppSection
-                {
+            foreach (var section in iniData.Sections) {
+                var appSection = new AppSection {
                     Section = section.SectionName,
                     Type = iniData[section.SectionName].ContainsKey(Configs.IniKeyAppType) ? iniData[section.SectionName][Configs.IniKeyAppType] : "",
                     Title = iniData[section.SectionName].ContainsKey(Configs.IniKeyAppTitle) ? iniData[section.SectionName][Configs.IniKeyAppTitle] : "",
@@ -226,8 +200,7 @@ namespace AppManager2.Services
                     IsRunning = false
                 };
 
-                if (!string.IsNullOrEmpty(appSection.Group) && !GroupList.Contains(appSection.Group))
-                {
+                if (!string.IsNullOrEmpty(appSection.Group) && !GroupList.Contains(appSection.Group)) {
                     GroupList.Add(appSection.Group);
                 }
 
@@ -236,12 +209,10 @@ namespace AppManager2.Services
             }
         }
 
-        public void SaveToIni()
-        {
+        public void SaveToIni() {
             var iniData = new IniData();
 
-            foreach (var kvp in _dictionary)
-            {
+            foreach (var kvp in _dictionary) {
                 string section = kvp.Key;
                 var app = kvp.Value;
 

@@ -1,10 +1,8 @@
 ﻿using AppManager2.CustomEnum;
 
-namespace AppManager2.Models
-{
+namespace AppManager2.Models {
     [Table("http_send_param")]
-    public class HttpSendParam : TableData
-    {
+    public class HttpSendParam : TableData {
         public const string TYPE_HEAD = "head";
         public const string TYPE_BODY = "body";
 

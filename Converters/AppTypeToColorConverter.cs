@@ -3,8 +3,7 @@ using System.Globalization;
 using System.Windows.Data;
 using System.Windows.Media;
 
-namespace AppManager2.Converters
-{
+namespace AppManager2.Converters {
     /// <summary>
     /// 根据应用类型和字段类型返回对应颜色的转换器
     /// 用法：ConverterParameter="字段类型"
@@ -15,10 +14,8 @@ namespace AppManager2.Converters
     /// - 橙色: 可选项但端口/心跳必填其一
     /// - 黑色: 可选项
     /// </summary>
-    public class AppTypeToColorConverter : IMultiValueConverter
-    {
-        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
-        {
+    public class AppTypeToColorConverter : IMultiValueConverter {
+        public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) {
             if (values == null || values.Length == 0 || values[0] == null)
                 return new SolidColorBrush(Colors.Black);
 
@@ -28,19 +25,16 @@ namespace AppManager2.Converters
             return GetColor(appType, fieldType);
         }
 
-        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture)
-        {
+        public object[] ConvertBack(object value, Type[] targetTypes, object parameter, CultureInfo culture) {
             throw new NotImplementedException();
         }
 
-        private SolidColorBrush GetColor(string appType, string fieldType)
-        {
+        private SolidColorBrush GetColor(string appType, string fieldType) {
             if (string.IsNullOrEmpty(fieldType))
                 return new SolidColorBrush(Colors.Black);
 
             // 根据字段类型和应用类型返回颜色
-            switch (fieldType)
-            {
+            switch (fieldType) {
                 case "title": // 名称 - 所有类型都必填
                 case "path":  // 路径 - 所有类型都必填
                     return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // 红色 #DC3545

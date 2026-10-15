@@ -4,14 +4,12 @@ using System.Collections.ObjectModel;
 using System.Windows.Input;
 using System.Windows.Media;
 
-namespace AppManager2.Models
-{
+namespace AppManager2.Models {
     /// <summary>
     /// 应用树节点（对应老项目TreeView中的节点，含组节点和应用节点）
     /// </summary>
     [AddINotifyPropertyChangedInterface]
-    public class TreeItemModel
-    {
+    public class TreeItemModel {
         public string Name { get; set; }
         public string Flag { get; set; }  // "group" or "child"
         public string Section { get; set; }
@@ -36,8 +34,7 @@ namespace AppManager2.Models
 
         /// <summary>运行状态描述</summary>
         public string RunStatText => Flag == Configs.NodeFlagChild
-            ? RunStat switch
-            {
+            ? RunStat switch {
                 Configs.AppRunStatFail => "启动失败",
                 Configs.AppRunStatRunning => "启动中...",
                 Configs.AppRunStatSuccess => "运行中",
@@ -67,8 +64,7 @@ namespace AppManager2.Models
         public ICommand LocateFileCommand { get; set; }
         public ICommand FreshCommand { get; set; }
 
-        public TreeItemModel()
-        {
+        public TreeItemModel() {
             Children = new ObservableCollection<TreeItemModel>();
             RunStat = 0;
             IsRunning = false;

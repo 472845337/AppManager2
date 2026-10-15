@@ -5,13 +5,11 @@ using System.IO;
 using System.Text;
 using Utils;
 
-namespace AppManager2.AMUtils
-{
+namespace AppManager2.AMUtils {
     /// <summary>
     /// java进程工具，创建bat脚本（参考 AppManager 的生成方式）
     /// </summary>
-    internal static class JavaAppUtils
-    {
+    internal static class JavaAppUtils {
         public static string Profiles { get; set; }
         public static string JdkPath { get; set; }
         public static string LogPath { get; set; }
@@ -19,8 +17,7 @@ namespace AppManager2.AMUtils
         /// <summary>
         /// 从 System.ini 加载全局设置（JDK、日志目录、运行环境），供脚本生成使用
         /// </summary>
-        public static void LoadSettings()
-        {
+        public static void LoadSettings() {
             var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
             JdkPath = iniData[Configs.IniSectionSet][Configs.IniKeySetJdkpath];
             Profiles = iniData[Configs.IniSectionSet][Configs.IniKeySetProfiles];
@@ -30,20 +27,14 @@ namespace AppManager2.AMUtils
         /// <summary>
         /// 创建启动脚本，成功返回 bool.TrueString，失败返回错误信息
         /// </summary>
-        public static string CreateStartBat(AppSection appSection, string logFileName, string errorLogFileName)
-        {
+        public static string CreateStartBat(AppSection appSection, string logFileName, string errorLogFileName) {
             var result = bool.TrueString;
-            if (string.IsNullOrEmpty(appSection.Jdk))
-            {
-                if (!string.IsNullOrEmpty(JdkPath) && !Directory.Exists(JdkPath))
-                {
+            if (string.IsNullOrEmpty(appSection.Jdk)) {
+                if (!string.IsNullOrEmpty(JdkPath) && !Directory.Exists(JdkPath)) {
                     return $"JDK路径{JdkPath}不存在，请重新配置！";
                 }
-            }
-            else
-            {
-                if (!Directory.Exists(appSection.Jdk))
-                {
+            } else {
+                if (!Directory.Exists(appSection.Jdk)) {
                     return $"项目:[{appSection.Title}]的JDK路径:[{appSection.Jdk}]不存在，请重新配置！";
                 }
             }
@@ -52,30 +43,24 @@ namespace AppManager2.AMUtils
             script.Append("@echo off").Append(Environment.NewLine);
             script.Append("chcp 65001").Append(Environment.NewLine);
             script.Append("title ").Append("\"").Append(appSection.Title).Append("\"").Append(Environment.NewLine);
-            if (!string.IsNullOrEmpty(appSection.Ext))
-            {
+            if (!string.IsNullOrEmpty(appSection.Ext)) {
                 script.Append(StringUtils.TxtDecode(NewLine2Space(appSection.Ext))).Append(Environment.NewLine);
             }
             // 创建日志目录（如果需要输出日志）
-            if (!appSection.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName))
-            {
+            if (!appSection.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
                 var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : LogPath + Configs.PathCharacter) + appSection.Title + Configs.PathCharacter;
                 FileUtils.CreateDirectory(projectLogPath);
                 script.Append("if not exist \"").Append(projectLogPath).Append("\" mkdir \"").Append(projectLogPath).Append("\"").Append(Environment.NewLine);
             }
             // jdk路径
             var usedJdkPath = string.IsNullOrEmpty(appSection.Jdk) ? JdkPath : appSection.Jdk;
-            if (Directory.Exists(usedJdkPath))
-            {
+            if (Directory.Exists(usedJdkPath)) {
                 script.Append("\"").Append(usedJdkPath).Append("\\bin\\java.exe\"");
-            }
-            else
-            {
+            } else {
                 script.Append("java");
             }
             // 启动参数
-            if (!string.IsNullOrEmpty(appSection.Param))
-            {
+            if (!string.IsNullOrEmpty(appSection.Param)) {
                 script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(appSection.Param)));
             }
             // jar包路径
@@ -83,31 +68,26 @@ namespace AppManager2.AMUtils
 
             var useEnvProFiles = false;
             // 环境参数
-            if (!string.IsNullOrEmpty(appSection.Env))
-            {
+            if (!string.IsNullOrEmpty(appSection.Env)) {
                 script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(appSection.Env)));
 
-                if (appSection.Env.Contains("spring.profiles.active="))
-                {
+                if (appSection.Env.Contains("spring.profiles.active=")) {
                     // 环境参数中配置了指定了启动环境
                     useEnvProFiles = true;
                 }
             }
             // profile配置
-            if (!useEnvProFiles)
-            {
+            if (!useEnvProFiles) {
                 script.Append(" --spring.profiles.active=").Append(Profiles);
             }
             // 指定启动端口
             script.Append(" --server.port=").Append(appSection.Port);
             // 是否将运行日志输出，配置文件后，日志将不会在console中输出
-            if (!appSection.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName))
-            {
+            if (!appSection.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
                 var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : LogPath + Configs.PathCharacter) + appSection.Title + Configs.PathCharacter;
                 // 日志文件
                 script.Append(" > \"").Append(projectLogPath).Append(logFileName).Append("\"");
-                if (!string.IsNullOrEmpty(errorLogFileName))
-                {
+                if (!string.IsNullOrEmpty(errorLogFileName)) {
                     // 异常日志
                     script.Append(" 2>").Append("\"").Append(projectLogPath).Append(errorLogFileName).Append("\"");
                 }
@@ -124,8 +104,7 @@ namespace AppManager2.AMUtils
         /// <summary>
         /// 创建杀进程的脚本文件
         /// </summary>
-        public static void CreateStopBat(AppSection appSection)
-        {
+        public static void CreateStopBat(AppSection appSection) {
             var script = new StringBuilder();
             script.Append("@echo off").Append(Environment.NewLine);
             script.Append("setlocal enabledelayedexpansion").Append(Environment.NewLine);
@@ -148,8 +127,7 @@ namespace AppManager2.AMUtils
             FileUtils.CreateFile(FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop), script.ToString(), new UTF8Encoding(false));
         }
 
-        public static void RemoveBat(string title)
-        {
+        public static void RemoveBat(string title) {
             File.Delete(FileUtils.GetBatFilePath(title, Configs.BatFileTypeStop));
             File.Delete(FileUtils.GetBatFilePath(title, Configs.BatFileTypeStart));
         }
@@ -157,10 +135,8 @@ namespace AppManager2.AMUtils
         /// <summary>
         /// 将换行替换为空格（多行参数拼成单行命令）
         /// </summary>
-        private static string NewLine2Space(string str)
-        {
-            if (!string.IsNullOrEmpty(str))
-            {
+        private static string NewLine2Space(string str) {
+            if (!string.IsNullOrEmpty(str)) {
                 str = str.Replace("\\r\\n", " ").Replace("\\n", " ").Replace("\\r", " ");
             }
             return str;
