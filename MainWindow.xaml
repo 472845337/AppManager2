@@ -231,13 +231,16 @@
                                                                         IsHitTestVisible="False"/>
                                                         </Grid>
                                                     </Border>
-                                                    <!-- 子级整体缩进一层 -->
-                                                    <ItemsPresenter x:Name="ItemsHost" Margin="0,0,0,0"/>
+                                                    <ItemsPresenter x:Name="ItemsHost"/>
                                                 </StackPanel>
                                                 <ControlTemplate.Triggers>
                                                     <Trigger Property="HasItems" Value="False">
                                                         <Setter TargetName="Expander" Property="Visibility" Value="Hidden"/>
                                                     </Trigger>
+                                                    <!-- 组内项目：仅头部内容右移一层标识归属，整行背景（状态色/选中/悬停）保持铺满不缺角 -->
+                                                    <DataTrigger Binding="{Binding IsGroupMember}" Value="True">
+                                                        <Setter TargetName="PART_Header" Property="Margin" Value="18,0,0,0"/>
+                                                    </DataTrigger>
                                                     <Trigger Property="IsExpanded" Value="False">
                                                         <Setter TargetName="ItemsHost" Property="Visibility" Value="Collapsed"/>
                                                     </Trigger>
@@ -257,6 +260,8 @@
                                             </ControlTemplate>
                                         </Setter.Value>
                                     </Setter>
+                                    <!-- 拦截选中/聚焦的自动滚入：长项目名行不再把水平滚动条拉到最右（垂直跟随保留，处理在code-behind） -->
+                                    <EventSetter Event="RequestBringIntoView" Handler="TreeViewItem_RequestBringIntoView"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Flag}" Value="group">
                                             <Setter Property="ContextMenu" Value="{StaticResource GroupNodeContextMenu}"/>

@@ -379,6 +379,50 @@ namespace AppManager2
             }
         }
 
+        private ScrollViewer _treeScrollViewer;
+
+        /// <summary>
+        /// 拦截节点选中/聚焦时的自动BringIntoView：长项目名的行比可视区宽，WPF默认会把水平滚动条拉到最右。
+        /// 改为垂直方向不可见时仅滚动垂直，水平方向始终保持不动（键盘方向键导航的垂直跟随不受影响）。
+        /// 必须挂在TreeViewItem容器上：事件沿可视树冒泡，先于TreeView模板内部的ScrollViewer收到
+        /// </summary>
+        private void TreeViewItem_RequestBringIntoView(object sender, RequestBringIntoViewEventArgs e)
+        {
+            if (!(sender is TreeViewItem item)) return;
+            _treeScrollViewer ??= FindVisualChild<ScrollViewer>(AppTreeView);
+            if (_treeScrollViewer == null) return;
+
+            e.Handled = true; // 阻止默认的整矩形滚入（含水平滚动）
+            try
+            {
+                var y = item.TransformToAncestor(_treeScrollViewer).Transform(new Point(0, 0)).Y;
+                if (y < 0)
+                {
+                    _treeScrollViewer.ScrollToVerticalOffset(_treeScrollViewer.VerticalOffset + y);
+                }
+                else if (y + item.ActualHeight > _treeScrollViewer.ViewportHeight)
+                {
+                    _treeScrollViewer.ScrollToVerticalOffset(_treeScrollViewer.VerticalOffset + y + item.ActualHeight - _treeScrollViewer.ViewportHeight);
+                }
+            }
+            catch (InvalidOperationException)
+            {
+                // 节点不在可视树（如收缩组内部）时坐标变换不可用，忽略
+            }
+        }
+
+        private static T FindVisualChild<T>(DependencyObject parent) where T : DependencyObject
+        {
+            for (var i = 0; i < VisualTreeHelper.GetChildrenCount(parent); i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+                if (child is T typed) return typed;
+                var result = FindVisualChild<T>(child);
+                if (result != null) return result;
+            }
+            return null;
+        }
+
         private void OnTabControlSelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ViewModel != null && sender is TabControl tabControl)
@@ -507,6 +551,8 @@ namespace AppManager2
                         targetParent = targetNode.Children;
                         index = targetNode.Children.Count;
                         group = targetNode.GroupName;
+                        // 拖入收缩组时展开该组，保证移入节点可见且容器已生成（与新增项目进组的行为一致）
+                        targetNode.IsExpanded = true;
                     }
                     else
                     {
@@ -539,6 +585,12 @@ namespace AppManager2
             }
 
             // 从原位置移除（同集合内移动时修正插入索引）
+            // WPF移除选中节点时会把选中重置到首个根节点：先清除选中避免跳选，插入后恢复选中拖拽节点
+            var selectedContainer = FindSelectedTreeViewItem(AppTreeView);
+            if (selectedContainer != null && ReferenceEquals(selectedContainer.DataContext, moveNode))
+            {
+                selectedContainer.IsSelected = false;
+            }
             if (oldParent != null)
             {
                 var removedAt = oldParent.IndexOf(moveNode);
@@ -561,6 +613,15 @@ namespace AppManager2
 
             // 排序与分组写入数据库（Sort从1开始按树序重排）
             vm.SaveTreeOrder();
+
+            // 恢复选中拖拽节点：连同键盘焦点一起还原（焦点若落在树空白处会触发取消选中）
+            AppTreeView.UpdateLayout();
+            var movedContainer = FindTreeViewItemForNode(AppTreeView, moveNode);
+            if (movedContainer != null)
+            {
+                movedContainer.IsSelected = true;
+                movedContainer.Focus();
+            }
         }
 
         private static int isUpIndex(System.Collections.ObjectModel.ObservableCollection<TreeItemModel> parent, TreeItemModel targetNode, bool isUp)
@@ -663,6 +724,24 @@ namespace AppManager2
                     if (container.IsSelected) return container;
                     var childSelected = FindSelectedTreeViewItem(container);
                     if (childSelected != null) return childSelected;
+                }
+            }
+            return null;
+        }
+
+        /// <summary>
+        /// 递归查找节点数据对应的TreeViewItem容器（拖拽落定后恢复选中用；组节点需处于展开状态才有子容器）
+        /// </summary>
+        private static TreeViewItem FindTreeViewItemForNode(ItemsControl itemsControl, TreeItemModel node)
+        {
+            if (itemsControl == null) return null;
+            foreach (var item in itemsControl.Items)
+            {
+                if (itemsControl.ItemContainerGenerator.ContainerFromItem(item) is TreeViewItem container)
+                {
+                    if (ReferenceEquals(item, node)) return container;
+                    var childResult = FindTreeViewItemForNode(container, node);
+                    if (childResult != null) return childResult;
                 }
             }
             return null;

@@ -52,6 +52,9 @@ namespace AppManager2.Models
         /// <summary>可停止：运行成功（对应老项目FreshAppColor的stopEnabled）</summary>
         public bool CanStop => RunStat == Configs.AppRunStatSuccess;
 
+        /// <summary>是否为组内项目（独立根项目GroupName为null或空串，拖拽清组时写入空串）：界面据此对组内项目做内容缩进，整行背景不受影响</summary>
+        public bool IsGroupMember => Flag == Configs.NodeFlagChild && !string.IsNullOrEmpty(GroupName);
+
         // 节点右键菜单命令（构建树时由 ViewModel 注入）
         public ICommand DetailCommand { get; set; }
         public ICommand WarnSwitchCommand { get; set; }
