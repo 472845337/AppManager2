@@ -766,6 +766,26 @@ namespace AppManager2 {
             }
         }
 
+        // Ctrl+滚轮字体缩放范围（步长1，超限保持不变且不提示；大小不持久化，重启恢复默认字号）
+        private const double RunLogFontMinSize = 8;
+        private const double RunLogFontMaxSize = 40;
+
+        /// <summary>
+        /// 运行日志Ctrl+滚轮调整字体大小（浏览器/编辑器通用习惯）：
+        /// 按住Ctrl向上滚动放大、向下缩小；Ctrl按住时滚轮专用于缩放（不滚动日志），
+        /// 超出上下限静默不变。字号写入当前Tab模型（每项目独立），
+        /// 不直接设控件本地值——TabControl切换Tab复用元素树，本地值会串到其他项目
+        /// </summary>
+        private void RunLogTextBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            e.Handled = true;
+            if (!(sender is TextBox { DataContext: AppRunTabItemModel tabItem })) return;
+
+            var fontSize = tabItem.LogFontSize + (e.Delta > 0 ? 1 : -1);
+            if (fontSize < RunLogFontMinSize || fontSize > RunLogFontMaxSize) return;
+            tabItem.LogFontSize = fontSize;
+        }
+
         /// <summary>
         /// 展开所有TreeView节点
         /// </summary>
@@ -800,6 +820,10 @@ namespace AppManager2 {
                     CollapseTreeViewItems(container);
                 }
             }
+        }
+
+        private void TextBox_MouseWheel(object sender, MouseWheelEventArgs e) {
+
         }
     }
 }

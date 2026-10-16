@@ -2,6 +2,7 @@
 using System;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace AppManager2.Views {
     /// <summary>
@@ -9,6 +10,10 @@ namespace AppManager2.Views {
     /// </summary>
     public partial class ToolPageView : UserControl {
         private ToolPageViewModel ViewModel => DataContext as ToolPageViewModel;
+
+        // 响应区Ctrl+滚轮字体缩放范围（步长1，超限保持不变且不提示；大小不持久化，恢复默认12）
+        private const double ResponseFontMinSize = 8;
+        private const double ResponseFontMaxSize = 40;
 
         public ToolPageView() {
             InitializeComponent();
@@ -66,6 +71,21 @@ namespace AppManager2.Views {
         /// </summary>
         private void SaveHttpRequest_Changed(object sender, RoutedEventArgs e) {
             ViewModel?.SaveSaveHttpRequestSetting();
+        }
+
+        /// <summary>
+        /// 响应区Ctrl+滚轮调整字体大小（与运行日志一致的习惯）：
+        /// 按住Ctrl向上滚动放大、向下缩小；Ctrl按住时滚轮专用于缩放（不滚动内容），
+        /// 超出上下限静默不变。响应区为单一TextBox实例，直接设本地值即可
+        /// </summary>
+        private void ResponseTextBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
+            e.Handled = true;
+            if (!(sender is TextBox textBox)) return;
+
+            var fontSize = textBox.FontSize + (e.Delta > 0 ? 1 : -1);
+            if (fontSize < ResponseFontMinSize || fontSize > ResponseFontMaxSize) return;
+            textBox.FontSize = fontSize;
         }
     }
 }

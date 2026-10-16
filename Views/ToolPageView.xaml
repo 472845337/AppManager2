@@ -169,9 +169,11 @@
                     <Button DockPanel.Dock="Right" Margin="0 2 0 2" Style="{StaticResource Btn_Danger}" Content="清空"
                             Command="{Binding ClearResponseCommand}"/>
                 </DockPanel>
+                <!-- 响应区：Ctrl+滚轮调整字体大小（8~40，超限静默不变，不持久化） -->
                 <TextBox Text="{Binding HttpResponse, Mode=OneWay}" IsReadOnly="True"
                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                         FontFamily="Consolas" FontSize="12" Background="Black" Foreground="White"/>
+                         FontFamily="Consolas" FontSize="14" Background="Black" Foreground="White"
+                         PreviewMouseWheel="ResponseTextBox_PreviewMouseWheel"/>
             </DockPanel>
         </Grid>
 

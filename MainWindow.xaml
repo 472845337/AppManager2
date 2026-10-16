@@ -388,12 +388,16 @@
                                         </TextBox.InputBindings>
                                     </TextBox>
                                     <!-- 运行日志（对应老项目RichTextBox，黑底白字+行数裁剪+自动滚动）；
-                                         换行按项目配置：系统(取设置-应用监控)/自动WrapWithOverflow/不换行NoWrap -->
+                                         换行按项目配置：系统(取设置-应用监控)/自动WrapWithOverflow/不换行NoWrap；
+                                         Ctrl+滚轮调整字体大小（8~40，超限静默不变，不持久化），
+                                         字号绑定Tab模型：TabControl切换Tab复用元素树，存控件本地值会串到其他项目 -->
                                     <TextBox Text="{Binding LogContent, Mode=OneWay}" IsReadOnly="True"
                                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                                                 TextWrapping="{Binding LogWrapping}"
+                                                 FontSize="{Binding LogFontSize}"
                                                  FontFamily="Consolas"
                                                  Background="Black" Foreground="White" BorderThickness="0"
+                                                 PreviewMouseWheel="RunLogTextBox_PreviewMouseWheel"
                                                  behaviors:TextBoxAutoScroll.AutoScroll="True">
                                         <TextBox.ContextMenu>
                                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
