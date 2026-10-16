@@ -61,7 +61,7 @@ namespace AppManager2.AMUtils {
             }
             // 启动参数
             if (!string.IsNullOrEmpty(app.Param)) {
-                script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(app.Param)));
+                script.Append(" ").Append(StringUtils.EscapeBatSpecialChar(StringUtils.TxtDecode(NewLine2Space(app.Param))));
             }
             // jar包路径
             script.Append(" -jar ").Append("\"").Append(app.App).Append("\"");
@@ -69,7 +69,7 @@ namespace AppManager2.AMUtils {
             var useEnvProFiles = false;
             // 环境参数
             if (!string.IsNullOrEmpty(app.Env)) {
-                script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(app.Env)));
+                script.Append(" ").Append(StringUtils.EscapeBatSpecialChar(StringUtils.TxtDecode(NewLine2Space(app.Env))));
 
                 if (app.Env.Contains("spring.profiles.active=")) {
                     // 环境参数中配置了指定了启动环境
