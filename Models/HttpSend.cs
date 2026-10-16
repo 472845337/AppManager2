@@ -22,6 +22,14 @@ namespace AppManager2.Models {
         [TableParam("code", "VARCHAR")]
         public string Code { get; set; }
 
+        /// <summary>是否收藏（常用请求钉住，去重/清空时不删除）；非空置bool，老记录NULL读出为false</summary>
+        [TableParam("is_favorite", "BIT")]
+        public bool IsFavorite { get; set; }
+
+        /// <summary>收藏的功能名称（可为空，列表回退显示Url；取消收藏时保留，便于再次收藏回填）</summary>
+        [TableParam("favorite_name", "VARCHAR")]
+        public string FavoriteName { get; set; }
+
         public List<HttpSendParam> ParamList { get; set; }
     }
 }

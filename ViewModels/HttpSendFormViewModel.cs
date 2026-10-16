@@ -13,7 +13,8 @@ using Utils;
 
 namespace AppManager2.ViewModels {
     /// <summary>
-    /// 发送记录窗口VM（对应老项目HttpSendForm）：查看详情、删除、清空、去重（参数/链接/异常）、重发
+    /// 发送记录窗口VM（对应老项目HttpSendForm）：查看详情、删除、清空、去重（参数/链接/异常）、
+    /// 重发（回填工具页）、收藏（功能名称/只看收藏，去重与清空跳过收藏记录）
     /// </summary>
     [AddINotifyPropertyChangedInterface]
     public class HttpSendFormViewModel : BaseViewModel {
@@ -22,12 +23,20 @@ namespace AppManager2.ViewModels {
         [OnChangedMethod(nameof(OnSelectedChanged))]
         public HttpSend SelectedHttpSend { get; set; }
 
+        [OnChangedMethod(nameof(OnFilterChanged))]
+        public bool ShowFavoriteOnly { get; set; }
+
+        /// <summary>收藏按钮文字：随选中项收藏状态切换（★收藏/取消收藏）</summary>
+        public string FavoriteButtonText { get; set; } = "★收藏";
+
         public string DetailText { get; set; }
 
         public ICommand RefreshCommand { get; set; }
         public ICommand DeleteCommand { get; set; }
         public ICommand ClearCommand { get; set; }
         public ICommand SendAgainCommand { get; set; }
+        public ICommand ToggleFavoriteCommand { get; set; }
+        public ICommand RenameCommand { get; set; }
         public ICommand DeduplicateUrlCommand { get; set; }
         public ICommand DeduplicateParamCommand { get; set; }
         public ICommand DeduplicateErrorCommand { get; set; }
@@ -39,6 +48,8 @@ namespace AppManager2.ViewModels {
             DeleteCommand = new RelayCommand(OnDelete);
             ClearCommand = new RelayCommand(OnClear);
             SendAgainCommand = new RelayCommand(OnSendAgain);
+            ToggleFavoriteCommand = new RelayCommand(OnToggleFavorite);
+            RenameCommand = new RelayCommand(OnRename);
             DeduplicateUrlCommand = new RelayCommand(OnDeduplicateUrl);
             DeduplicateParamCommand = new RelayCommand(OnDeduplicateParam);
             DeduplicateErrorCommand = new RelayCommand(OnDeduplicateError);
@@ -48,6 +59,9 @@ namespace AppManager2.ViewModels {
         private void LoadData() {
             // SelectList按id倒序（最新在前），与老项目OrderBy="id desc"一致
             var list = HttpSendService.Instance.GetAllWithParams();
+            if (ShowFavoriteOnly) {
+                list = list.Where(item => item.IsFavorite).ToList();
+            }
             HttpSendList.Clear();
             foreach (var item in list) {
                 HttpSendList.Add(item);
@@ -64,6 +78,11 @@ namespace AppManager2.ViewModels {
         /// </summary>
         private void OnSelectedChanged() {
             DetailText = BuildDetail(SelectedHttpSend);
+            FavoriteButtonText = SelectedHttpSend != null && SelectedHttpSend.IsFavorite ? "取消收藏" : "★收藏";
+        }
+
+        private void OnFilterChanged() {
+            LoadData();
         }
 
         private static string BuildDetail(HttpSend httpSend) {
@@ -76,6 +95,10 @@ namespace AppManager2.ViewModels {
             sb.Append($"方式:{httpSend.Type}").Append(Environment.NewLine);
             sb.Append($"状态:{httpSend.Code}").Append(Environment.NewLine);
             sb.Append($"类型:{httpSend.ContentType}").Append(Environment.NewLine);
+            sb.Append($"收藏:{(httpSend.IsFavorite ? "是" : "否")}").Append(Environment.NewLine);
+            if (!string.IsNullOrEmpty(httpSend.FavoriteName)) {
+                sb.Append($"名称:{httpSend.FavoriteName}").Append(Environment.NewLine);
+            }
 
             var paramList = HttpSendParamService.Instance.GetByHttpSendId(httpSend.Id);
             var headParamList = paramList?.Where(p => HttpSendParam.TYPE_HEAD.Equals(p.Type)).ToList();
@@ -101,7 +124,11 @@ namespace AppManager2.ViewModels {
                 MessageBox.Show("未选择待删除数据！", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            if (MessageBoxResult.OK != MessageBox.Show("确认删除所选发送记录？", "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
+            // 收藏记录单独删除时明确提示，避免误删常用请求
+            var favoriteTip = SelectedHttpSend.IsFavorite
+                ? $"（已收藏{(string.IsNullOrEmpty(SelectedHttpSend.FavoriteName) ? string.Empty : "：" + SelectedHttpSend.FavoriteName)}）"
+                : string.Empty;
+            if (MessageBoxResult.OK != MessageBox.Show($"确认删除所选发送记录？{favoriteTip}", "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
                 return;
             }
             DeleteRecord(SelectedHttpSend);
@@ -119,15 +146,81 @@ namespace AppManager2.ViewModels {
         }
 
         private void OnClear(object obj) {
-            if (MessageBoxResult.OK != MessageBox.Show("确认清空记录？", "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
+            var allList = HttpSendService.Instance.SelectList();
+            var favoriteCount = allList.Count(item => item.IsFavorite);
+            var keepTip = favoriteCount > 0 ? $"（将保留{favoriteCount}条收藏记录）" : string.Empty;
+            if (MessageBoxResult.OK != MessageBox.Show($"确认清空所有未收藏的发送记录？{keepTip}", "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
                 return;
             }
-            HttpSendService.Instance.Clear();
+            foreach (var single in allList) {
+                if (!single.IsFavorite) {
+                    DeleteRecord(single);
+                }
+            }
             HttpSendService.Instance.Vacuum();
-            HttpSendParamService.Instance.Clear();
             LoadData();
-            DetailText = "清空记录成功";
+            DetailText = favoriteCount > 0 ? $"清空完成，保留{favoriteCount}条收藏记录" : "清空记录成功";
         }
+
+        #region 收藏
+
+        /// <summary>
+        /// 收藏/取消收藏选中记录：收藏时弹窗填写功能名称（可为空，空则列表显示Url）；
+        /// 取消收藏保留功能名称，再次收藏时回填
+        /// </summary>
+        private void OnToggleFavorite(object obj) {
+            if (SelectedHttpSend == null) {
+                MessageBox.Show("未选择发送记录", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            if (SelectedHttpSend.IsFavorite) {
+                SelectedHttpSend.IsFavorite = false;
+                HttpSendService.Instance.Update(SelectedHttpSend);
+                ReloadKeepSelection();
+                DetailText = "已取消收藏";
+                return;
+            }
+            var name = Views.InputDialog.Show("收藏请求",
+                $"为该请求设置功能名称（可为空，空则显示链接）：{Environment.NewLine}{SelectedHttpSend.Url}",
+                SelectedHttpSend.FavoriteName);
+            if (name == null) return; // 取消输入
+            SelectedHttpSend.IsFavorite = true;
+            SelectedHttpSend.FavoriteName = name;
+            HttpSendService.Instance.Update(SelectedHttpSend);
+            ReloadKeepSelection();
+            DetailText = string.IsNullOrEmpty(name) ? "收藏成功" : $"收藏成功：{name}";
+        }
+
+        /// <summary>
+        /// 修改选中记录的功能名称（收藏与否均可修改）
+        /// </summary>
+        private void OnRename(object obj) {
+            if (SelectedHttpSend == null) {
+                MessageBox.Show("未选择发送记录", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+            var name = Views.InputDialog.Show("修改功能名称",
+                $"修改该请求的功能名称（可为空）：{Environment.NewLine}{SelectedHttpSend.Url}",
+                SelectedHttpSend.FavoriteName);
+            if (name == null) return; // 取消输入
+            SelectedHttpSend.FavoriteName = name;
+            HttpSendService.Instance.Update(SelectedHttpSend);
+            ReloadKeepSelection();
+            DetailText = string.IsNullOrEmpty(name) ? "功能名称已清空" : $"功能名称已修改为：{name}";
+        }
+
+        /// <summary>
+        /// 重载列表并按Id恢复选中（收藏/改名后重载，避免选中项丢失、详情被清空）
+        /// </summary>
+        private void ReloadKeepSelection() {
+            var selectedId = SelectedHttpSend?.Id;
+            LoadData();
+            if (selectedId != null) {
+                SelectedHttpSend = HttpSendList.FirstOrDefault(item => item.Id == selectedId);
+            }
+        }
+
+        #endregion
 
         /// <summary>
         /// 重发：回填到工具页并切到主窗口工具Tab（对应老项目SendAgainButton_Click）
@@ -147,11 +240,12 @@ namespace AppManager2.ViewModels {
         #region 去重（对应老项目DeduplicateMenuStrip三项）
 
         /// <summary>
-        /// 链接去重：Url相同保留最新的
+        /// 链接去重：Url相同保留最新的（收藏记录跳过，始终保留）
         /// </summary>
         private void OnDeduplicateUrl(object obj) {
             var existDic = new Dictionary<string, bool>();
             foreach (var single in HttpSendService.Instance.SelectList()) {
+                if (single.IsFavorite) continue;
                 if (existDic.ContainsKey(single.Url)) {
                     DeleteRecord(single);
                 } else {
@@ -163,11 +257,12 @@ namespace AppManager2.ViewModels {
         }
 
         /// <summary>
-        /// 参数去重：Url+方式+参数md5相同保留最新的
+        /// 参数去重：Url+方式+参数md5相同保留最新的（收藏记录跳过，始终保留）
         /// </summary>
         private void OnDeduplicateParam(object obj) {
             var existDic = new Dictionary<string, bool>();
             foreach (var single in HttpSendService.Instance.SelectList()) {
+                if (single.IsFavorite) continue;
                 var existKey = GetHttpSendKey(single);
                 if (existDic.ContainsKey(existKey)) {
                     DeleteRecord(single);
@@ -200,11 +295,11 @@ namespace AppManager2.ViewModels {
         }
 
         /// <summary>
-        /// 异常去重：去除所有非200的记录
+        /// 异常去重：去除所有非200的记录（收藏记录跳过，始终保留）
         /// </summary>
         private void OnDeduplicateError(object obj) {
             foreach (var single in HttpSendService.Instance.SelectList()) {
-                if (!"200".Equals(single.Code)) {
+                if (!single.IsFavorite && !"200".Equals(single.Code)) {
                     DeleteRecord(single);
                 }
             }

@@ -1,6 +1,7 @@
 ﻿using AppManager2.Config;
 using AppManager2.Models;
 using AppManager2.ViewModels;
+using IniParser.Model;
 using System;
 using System.ComponentModel;
 using System.IO;
@@ -10,7 +11,6 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
-using IniParser.Model;
 using IniParserUtils = global::Utils.IniParserUtils;
 
 namespace AppManager2 {

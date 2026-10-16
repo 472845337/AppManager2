@@ -24,39 +24,76 @@
         <Border Grid.Column="0" BorderBrush="#ccc" BorderThickness="1" Margin="5">
             <Grid>
                 <Grid.RowDefinitions>
+                    <!-- 记录操作：作用于选中项，按收藏工作流从左到右（收藏→改名→重发） -->
+                    <RowDefinition Height="Auto"/>
+                    <!-- 列表管理 + 只看收藏过滤 -->
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <WrapPanel Grid.Row="0" Orientation="Horizontal">
-                    <Button Style="{StaticResource Btn_Info}" Content="刷新" Command="{Binding RefreshCommand}"/>
-                    <Button Style="{StaticResource Btn_Warn}" Content="删除" Command="{Binding DeleteCommand}"/>
-                    <Button Style="{StaticResource Btn_Danger}" Content="清空" Command="{Binding ClearCommand}"/>
-                    <Button Style="{StaticResource Btn_Suc}" Content="去重" Click="DeduplicateButton_Click"
-                            ToolTip="按链接/参数去重或清除异常记录">
-                        <Button.ContextMenu>
-                            <ContextMenu>
-                                <MenuItem Header="参数去重" Command="{Binding DeduplicateParamCommand}"/>
-                                <MenuItem Header="链接去重" Command="{Binding DeduplicateUrlCommand}"/>
-                                <MenuItem Header="清除异常记录" Command="{Binding DeduplicateErrorCommand}"/>
-                            </ContextMenu>
-                        </Button.ContextMenu>
-                    </Button>
-                    <Button Style="{StaticResource Btn_Pri}" Content="重发" Command="{Binding SendAgainCommand}"/>
+                    <Button Style="{StaticResource Btn_Warn}" Content="{Binding FavoriteButtonText}" Command="{Binding ToggleFavoriteCommand}"
+                            ToolTip="收藏/取消收藏选中的发送记录，收藏时可设置功能名称"/>
+                    <Button Style="{StaticResource Btn_Info}" Content="改名" Command="{Binding RenameCommand}"
+                            ToolTip="修改选中记录的功能名称"/>
+                    <Button Style="{StaticResource Btn_Pri}" Content="重发" Command="{Binding SendAgainCommand}"
+                            ToolTip="回填到工具页（覆盖当前配置）"/>
                 </WrapPanel>
-                <ListBox Margin="4" Grid.Row="1" ItemsSource="{Binding HttpSendList}" SelectedItem="{Binding SelectedHttpSend}"
+                <DockPanel Grid.Row="1" LastChildFill="False">
+                    <CheckBox DockPanel.Dock="Right" Style="{StaticResource FormValue_Style}" Content="只看收藏"
+                              IsChecked="{Binding ShowFavoriteOnly}" ToolTip="仅显示已收藏的发送记录"/>
+                    <WrapPanel Orientation="Horizontal">
+                        <Button Style="{StaticResource Btn_Info}" Content="刷新" Command="{Binding RefreshCommand}"/>
+                        <Button Style="{StaticResource Btn_Warn}" Content="删除" Command="{Binding DeleteCommand}"/>
+                        <Button Style="{StaticResource Btn_Danger}" Content="清空" Command="{Binding ClearCommand}"
+                                ToolTip="清空所有未收藏的发送记录"/>
+                        <Button Style="{StaticResource Btn_Suc}" Content="去重" Click="DeduplicateButton_Click"
+                                ToolTip="按链接/参数去重或清除异常记录（跳过已收藏）">
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="参数去重" Command="{Binding DeduplicateParamCommand}"/>
+                                    <MenuItem Header="链接去重" Command="{Binding DeduplicateUrlCommand}"/>
+                                    <MenuItem Header="清除异常记录" Command="{Binding DeduplicateErrorCommand}"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                    </WrapPanel>
+                </DockPanel>
+                <ListBox Margin="4" Grid.Row="2" ItemsSource="{Binding HttpSendList}" SelectedItem="{Binding SelectedHttpSend}"
                          VirtualizingPanel.IsVirtualizing="True" ScrollViewer.HorizontalScrollBarVisibility="Auto">
                     <ListBox.ItemTemplate>
                         <DataTemplate>
-                            <StackPanel Margin="2">
-                                <TextBlock Text="{Binding Url}" FontWeight="Bold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Url}"/>
-                                <TextBlock FontSize="11" Foreground="Gray">
-                                    <Run Text="{Binding Type, Mode=OneWay}"/>
-                                    <Run Text=" | "/>
-                                    <Run Text="{Binding Code, Mode=OneWay}"/>
-                                    <Run Text=" | "/>
-                                    <Run Text="{Binding CreateTime, Mode=OneWay}"/>
-                                </TextBlock>
-                            </StackPanel>
+                            <DockPanel Margin="2">
+                                <!-- 收藏星标 -->
+                                <TextBlock DockPanel.Dock="Left" Text="★" FontSize="15" Foreground="#e6a23c"
+                                           VerticalAlignment="Center" Margin="0 0 4 0"
+                                           Visibility="{Binding IsFavorite, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                                <StackPanel>
+                                    <!-- 功能名称（收藏且已设置名称时显示，为空回退显示下方Url） -->
+                                    <TextBlock Text="{Binding FavoriteName}" FontWeight="Bold" Foreground="#b26a00"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding FavoriteName}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding FavoriteName}" Value="{x:Null}">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding FavoriteName}" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding Url}" FontWeight="Bold" TextTrimming="CharacterEllipsis" ToolTip="{Binding Url}"/>
+                                    <TextBlock FontSize="11" Foreground="Gray">
+                                        <Run Text="{Binding Type, Mode=OneWay}"/>
+                                        <Run Text=" | "/>
+                                        <Run Text="{Binding Code, Mode=OneWay}"/>
+                                        <Run Text=" | "/>
+                                        <Run Text="{Binding CreateTime, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </StackPanel>
+                            </DockPanel>
                         </DataTemplate>
                     </ListBox.ItemTemplate>
                 </ListBox>

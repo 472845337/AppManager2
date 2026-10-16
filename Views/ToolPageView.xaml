@@ -55,11 +55,11 @@
             <!-- Head参数区 -->
             <Border Grid.Row="0" BorderBrush="#ddd" BorderThickness="1">
                 <DockPanel>
-                    <DockPanel DockPanel.Dock="Top" LastChildFill="False" Background="#FAFAFA">
+                    <DockPanel  DockPanel.Dock="Top" LastChildFill="False" Background="#FAFAFA">
                         <TextBlock Style="{StaticResource FormLabel_Style}" Text="Head" VerticalAlignment="Center"/>
-                        <CheckBox Style="{StaticResource FormValue_Style}" Content="100-Continue" IsChecked="{Binding Expect100Continue}" IsEnabled="{Binding IsPost}" ToolTip="仅POST可用"/>
-                        <Button Style="{StaticResource Btn_Danger}" DockPanel.Dock="Right" Content="-" Command="{Binding ClearAllHeaderCommand}" ToolTip="清空所有Head参数"/>
-                        <Button Style="{StaticResource Btn_Pri}" DockPanel.Dock="Right" Content="+" Command="{Binding AddHeaderCommand}" ToolTip="添加Head参数"/>
+                        <CheckBox Style="{StaticResource FormValue_Style}" Content="100-Continue" IsChecked="{Binding Expect100Continue}" IsEnabled="{Binding HasBody}"/>
+                        <Button Margin="0 5 2 0" Style="{StaticResource Btn_Danger}" DockPanel.Dock="Right" Content="-" Command="{Binding ClearAllHeaderCommand}" ToolTip="清空所有Head参数"/>
+                        <Button Margin="0 5 2 0" Style="{StaticResource Btn_Pri}" DockPanel.Dock="Right" Content="+" Command="{Binding AddHeaderCommand}" ToolTip="添加Head参数"/>
                     </DockPanel>
                     <ScrollViewer VerticalScrollBarVisibility="Auto">
                         <ItemsControl Margin="5" Padding="0 0 5 5" ItemsSource="{Binding HeadParams}" BorderThickness="1" BorderBrush="#ddd">
@@ -99,9 +99,9 @@
                                                  IsChecked="{Binding FormIsFormData}"/>
                             <RadioButton Style="{StaticResource FormValue_Style}" Content="x-www-form-urlencoded" GroupName="FormContentType"
                                                  IsChecked="{Binding FormIsFormData, Converter={StaticResource InverseBoolConverter}}"/>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="-"
+                            <Button Margin="0 5 2 0" DockPanel.Dock="Right" Style="{StaticResource Btn_Danger}" Content="-"
                                             Command="{Binding ClearAllParamCommand}" ToolTip="清空所有参数"/>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Pri}" Content="+"
+                            <Button Margin="0 5 2 0" DockPanel.Dock="Right" Style="{StaticResource Btn_Pri}" Content="+"
                                             Command="{Binding AddParamCommand}" ToolTip="添加参数"/>
                         </DockPanel>
                         <ScrollViewer VerticalScrollBarVisibility="Auto">

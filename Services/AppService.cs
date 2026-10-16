@@ -2,7 +2,6 @@ using AppManager2.Config;
 using AppManager2.Models;
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using Utils;
 
 namespace AppManager2.Services {

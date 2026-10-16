@@ -328,8 +328,7 @@ namespace AppManager2.ViewModels {
                         sb.AppendLine($"状态:{ex.Status}");
                         RunOnUi(() => HttpResponse = sb.ToString());
                         httpSend.Result = ex.Message;
-                        var resp = ex.Response as HttpWebResponse;
-                        httpSend.Code = null != resp ? Convert.ToString((int)resp.StatusCode) : "null";
+                        httpSend.Code = ex.Response is HttpWebResponse resp ? Convert.ToString((int)resp.StatusCode) : "null";
                     }
                 });
             } catch (BusinessException ex) {
@@ -368,8 +367,8 @@ namespace AppManager2.ViewModels {
 
             var httpSend = new HttpSend { Url = url, Type = HttpType };
             var requestParams = new List<HttpSendParam>();
-            var headDic = CollectHeadParams(requestParams);
-            var formData = CollectFormParams(requestParams);
+            CollectHeadParams(requestParams);
+            CollectFormParams(requestParams);
             httpSend.ParamList = requestParams;
 
             var contentType = HttpUtils.ContentTypeJson;
