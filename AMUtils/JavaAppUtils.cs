@@ -27,51 +27,51 @@ namespace AppManager2.AMUtils {
         /// <summary>
         /// 创建启动脚本，成功返回 bool.TrueString，失败返回错误信息
         /// </summary>
-        public static string CreateStartBat(AppSection appSection, string logFileName, string errorLogFileName) {
+        public static string CreateStartBat(AppRecord app, string logFileName, string errorLogFileName) {
             var result = bool.TrueString;
-            if (string.IsNullOrEmpty(appSection.Jdk)) {
+            if (string.IsNullOrEmpty(app.Jdk)) {
                 if (!string.IsNullOrEmpty(JdkPath) && !Directory.Exists(JdkPath)) {
                     return $"JDK路径{JdkPath}不存在，请重新配置！";
                 }
             } else {
-                if (!Directory.Exists(appSection.Jdk)) {
-                    return $"项目:[{appSection.Title}]的JDK路径:[{appSection.Jdk}]不存在，请重新配置！";
+                if (!Directory.Exists(app.Jdk)) {
+                    return $"项目:[{app.Title}]的JDK路径:[{app.Jdk}]不存在，请重新配置！";
                 }
             }
 
             var script = new StringBuilder();
             script.Append("@echo off").Append(Environment.NewLine);
             script.Append("chcp 65001").Append(Environment.NewLine);
-            script.Append("title ").Append("\"").Append(appSection.Title).Append("\"").Append(Environment.NewLine);
-            if (!string.IsNullOrEmpty(appSection.Ext)) {
-                script.Append(StringUtils.TxtDecode(NewLine2Space(appSection.Ext))).Append(Environment.NewLine);
+            script.Append("title ").Append("\"").Append(app.Title).Append("\"").Append(Environment.NewLine);
+            if (!string.IsNullOrEmpty(app.Ext)) {
+                script.Append(StringUtils.TxtDecode(NewLine2Space(app.Ext))).Append(Environment.NewLine);
             }
             // 创建日志目录（如果需要输出日志）
-            if (!appSection.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
-                var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : LogPath + Configs.PathCharacter) + appSection.Title + Configs.PathCharacter;
+            if (!app.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
+                var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : LogPath + Configs.PathCharacter) + app.Title + Configs.PathCharacter;
                 FileUtils.CreateDirectory(projectLogPath);
                 script.Append("if not exist \"").Append(projectLogPath).Append("\" mkdir \"").Append(projectLogPath).Append("\"").Append(Environment.NewLine);
             }
             // jdk路径
-            var usedJdkPath = string.IsNullOrEmpty(appSection.Jdk) ? JdkPath : appSection.Jdk;
+            var usedJdkPath = string.IsNullOrEmpty(app.Jdk) ? JdkPath : app.Jdk;
             if (Directory.Exists(usedJdkPath)) {
                 script.Append("\"").Append(usedJdkPath).Append("\\bin\\java.exe\"");
             } else {
                 script.Append("java");
             }
             // 启动参数
-            if (!string.IsNullOrEmpty(appSection.Param)) {
-                script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(appSection.Param)));
+            if (!string.IsNullOrEmpty(app.Param)) {
+                script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(app.Param)));
             }
             // jar包路径
-            script.Append(" -jar ").Append("\"").Append(appSection.App).Append("\"");
+            script.Append(" -jar ").Append("\"").Append(app.App).Append("\"");
 
             var useEnvProFiles = false;
             // 环境参数
-            if (!string.IsNullOrEmpty(appSection.Env)) {
-                script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(appSection.Env)));
+            if (!string.IsNullOrEmpty(app.Env)) {
+                script.Append(" ").Append(StringUtils.TxtDecode(NewLine2Space(app.Env)));
 
-                if (appSection.Env.Contains("spring.profiles.active=")) {
+                if (app.Env.Contains("spring.profiles.active=")) {
                     // 环境参数中配置了指定了启动环境
                     useEnvProFiles = true;
                 }
@@ -81,10 +81,10 @@ namespace AppManager2.AMUtils {
                 script.Append(" --spring.profiles.active=").Append(Profiles);
             }
             // 指定启动端口
-            script.Append(" --server.port=").Append(appSection.Port);
+            script.Append(" --server.port=").Append(app.Port);
             // 是否将运行日志输出，配置文件后，日志将不会在console中输出
-            if (!appSection.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
-                var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : LogPath + Configs.PathCharacter) + appSection.Title + Configs.PathCharacter;
+            if (!app.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
+                var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : LogPath + Configs.PathCharacter) + app.Title + Configs.PathCharacter;
                 // 日志文件
                 script.Append(" > \"").Append(projectLogPath).Append(logFileName).Append("\"");
                 if (!string.IsNullOrEmpty(errorLogFileName)) {
@@ -97,19 +97,19 @@ namespace AppManager2.AMUtils {
             // 窗口不关闭
             script.Append("pause");
             // 创建启动bat文件
-            FileUtils.CreateFile(FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart), script.ToString(), new UTF8Encoding(false));
+            FileUtils.CreateFile(FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStart), script.ToString(), new UTF8Encoding(false));
             return result;
         }
 
         /// <summary>
         /// 创建杀进程的脚本文件
         /// </summary>
-        public static void CreateStopBat(AppSection appSection) {
+        public static void CreateStopBat(AppRecord app) {
             var script = new StringBuilder();
             script.Append("@echo off").Append(Environment.NewLine);
             script.Append("setlocal enabledelayedexpansion").Append(Environment.NewLine);
-            script.Append("for /f \"tokens=1-5\" %%a in ('netstat -ano ^| find \":").Append(appSection.Port).Append("\"') do (").Append(Environment.NewLine);
-            script.Append("    echo %%b% | find \"").Append(appSection.Port).Append("\" >nul && (").Append(Environment.NewLine);
+            script.Append("for /f \"tokens=1-5\" %%a in ('netstat -ano ^| find \":").Append(app.Port).Append("\"') do (").Append(Environment.NewLine);
+            script.Append("    echo %%b% | find \"").Append(app.Port).Append("\" >nul && (").Append(Environment.NewLine);
             script.Append("        if \"%%e%\" == \"\" (").Append(Environment.NewLine);
             script.Append("            set pid=%%d").Append(Environment.NewLine);
             script.Append("        ) else (").Append(Environment.NewLine);
@@ -124,7 +124,7 @@ namespace AppManager2.AMUtils {
             script.Append("    )").Append(Environment.NewLine);
             script.Append(")").Append(Environment.NewLine);
             script.Append(":end");
-            FileUtils.CreateFile(FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop), script.ToString(), new UTF8Encoding(false));
+            FileUtils.CreateFile(FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStop), script.ToString(), new UTF8Encoding(false));
         }
 
         public static void RemoveBat(string title) {

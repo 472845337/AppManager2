@@ -128,7 +128,6 @@
     <Compile Include="ViewModels\AppFormViewModel.cs" />
     <Compile Include="ViewModels\HttpSendFormViewModel.cs" />
     <Compile Include="ViewModels\AppExportViewModel.cs" />
-    <Compile Include="Models\AppSection.cs" />
     <Compile Include="Models\AppRecord.cs" />
     <Compile Include="Models\HttpSend.cs" />
     <Compile Include="Models\HttpSendParam.cs" />
@@ -136,6 +135,7 @@
     <Compile Include="Models\TreeItemModel.cs" />
     <Compile Include="Models\WxRobotMessage.cs" />
     <Compile Include="Models\AutoRunItemModel.cs" />
+    <Compile Include="Models\LogWrapOption.cs" />
     <Compile Include="Behaviors\TextBoxAutoScroll.cs" />
     <Compile Include="Models\AppRunTabItemModel.cs" />
     <Compile Include="Converters\BaseValueConverter.cs" />
@@ -146,6 +146,7 @@
     <Compile Include="Converters\SplitRatioToGridLengthConverter.cs" />
     <Compile Include="Converters\AppTypeToColorConverter.cs" />
     <Compile Include="Converters\InverseBoolConverter.cs" />
+    <Compile Include="Converters\StringEqualityConverter.cs" />
     <Compile Include="Config\Configs.cs" />
     <Compile Include="CustomEnum\Table.cs" />
     <Compile Include="CustomEnum\TableParam.cs" />

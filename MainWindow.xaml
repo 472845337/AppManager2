@@ -8,7 +8,7 @@
         xmlns:vm="clr-namespace:AppManager2.ViewModels"
         xmlns:behaviors="clr-namespace:AppManager2.Behaviors"
         mc:Ignorable="d"
-        Title="应用管理" Height="400" Width="500"
+        Title="应用管理" Height="500" Width="600"
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/main.ico"
         WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip">
     <Window.DataContext>
@@ -387,16 +387,28 @@
                                                             CommandParameter="{Binding}"/>
                                         </TextBox.InputBindings>
                                     </TextBox>
-                                    <!-- 运行日志（对应老项目RichTextBox，黑底白字+行数裁剪+自动滚动） -->
+                                    <!-- 运行日志（对应老项目RichTextBox，黑底白字+行数裁剪+自动滚动）；
+                                         换行按项目配置：系统(取设置-应用监控)/自动WrapWithOverflow/不换行NoWrap -->
                                     <TextBox Text="{Binding LogContent, Mode=OneWay}" IsReadOnly="True"
                                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                                                TextWrapping="{Binding LogWrapping}"
                                                  FontFamily="Consolas"
                                                  Background="Black" Foreground="White" BorderThickness="0"
                                                  behaviors:TextBoxAutoScroll.AutoScroll="True">
                                         <TextBox.ContextMenu>
-                                            <ContextMenu>
+                                            <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                                 <MenuItem Header="复制" Click="RunLogCopy_Click"/>
                                                 <MenuItem Header="清空" Click="RunLogClear_Click"/>
+                                                <Separator/>
+                                                <!-- 切换本项目的日志换行模式（勾选标记当前模式，立即入库） -->
+                                                <MenuItem Header="日志换行">
+                                                    <MenuItem Header="系统配置" Tag="system" Click="RunLogWrapMenu_Click"
+                                                              IsChecked="{Binding LogWrap, Converter={StaticResource StringEqualityConverter}, ConverterParameter=system, Mode=OneWay}"/>
+                                                    <MenuItem Header="自动换行" Tag="auto" Click="RunLogWrapMenu_Click"
+                                                              IsChecked="{Binding LogWrap, Converter={StaticResource StringEqualityConverter}, ConverterParameter=auto, Mode=OneWay}"/>
+                                                    <MenuItem Header="不换行" Tag="none" Click="RunLogWrapMenu_Click"
+                                                              IsChecked="{Binding LogWrap, Converter={StaticResource StringEqualityConverter}, ConverterParameter=none, Mode=OneWay}"/>
+                                                </MenuItem>
                                             </ContextMenu>
                                         </TextBox.ContextMenu>
                                     </TextBox>
@@ -503,15 +515,27 @@
                         <!-- 监听/关闭时：固定宽度，顶部对齐，不随窗口变化 -->
                         <StackPanel Grid.Column="2" VerticalAlignment="Top">
                             <!-- 监听：端口/心跳判定的超时时间与频次 -->
-                            <GroupBox Header="监听" Padding="10" Margin="0,0,0,10">
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Text="超时/s" VerticalAlignment="Center" Margin="0,0,5,0"/>
-                                    <TextBox Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}" Width="50"
-                                             Template="{StaticResource PlaceHolder}" Tag="15"/>
-                                    <TextBlock Text="频次/s" VerticalAlignment="Center" Margin="15,0,5,0"/>
-                                    <TextBox Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}" Width="50"
-                                             Template="{StaticResource PlaceHolder}" Tag="5"/>
-                                </StackPanel>
+                            <GroupBox Header="应用监控" Padding="10" Margin="0,0,0,10">
+                                <WrapPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="超时/s"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}"
+                                             Template="{StaticResource PlaceHolder}" Tag="15" Width="50"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="频次/s"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}"
+                                             Template="{StaticResource PlaceHolder}" Tag="5" Width="50"/>
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="日志换行"/>
+                                        <!-- 系统级换行配置（[set] log_wrap，默认不换行）：项目换行为“系统”时按此生效 -->
+                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="90"
+                                                  ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+                                                  SelectedValue="{Binding SelectedLogWrap}"
+                                                  ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
+                                    </StackPanel>
+                                </WrapPanel>
                             </GroupBox>
 
                             <!-- 关闭时：退出/最小化 -->

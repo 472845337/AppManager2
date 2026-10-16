@@ -32,7 +32,7 @@ namespace AppManager2.Services {
         public event Action<string, string> LogReceived;
 
         /// <summary>自启动请求（初始化监控时应用未运行且配置了AutoRun）</summary>
-        public event Action<AppSection> StartRequested;
+        public event Action<AppRecord> StartRequested;
 
         private AppMonitorService() {
             // 订阅只做一次，避免 Start 被多次调用时重复触发监控
@@ -116,11 +116,11 @@ namespace AppManager2.Services {
         /// </summary>
         /// <param name="app">应用</param>
         /// <param name="appInit">是否应用初始化监控（应用启动/程序启动时传true，会触发AutoRun）</param>
-        public void MonitorApp(AppSection app, bool appInit) {
+        public void MonitorApp(AppRecord app, bool appInit) {
             MonitorAppAsync(app, appInit);
         }
 
-        private Task MonitorAppAsync(AppSection app, bool appInit) {
+        private Task MonitorAppAsync(AppRecord app, bool appInit) {
             if (app == null) return Task.CompletedTask;
             return Task.Run(() => {
                 try {
@@ -131,7 +131,7 @@ namespace AppManager2.Services {
             });
         }
 
-        private void MonitorCore(AppSection app, bool appInit) {
+        private void MonitorCore(AppRecord app, bool appInit) {
             // 三级存活判定
             string result = null;
             var heartBeatUrl = app.HeartBeat;
@@ -218,7 +218,7 @@ namespace AppManager2.Services {
         /// <summary>
         /// 项目异常停止预警（企业微信机器人）
         /// </summary>
-        private void SendWarn(AppSection app) {
+        private void SendWarn(AppRecord app) {
             try {
                 if (!Configs.IsWarn || !app.IsWarn) {
                     return;

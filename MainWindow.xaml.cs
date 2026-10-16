@@ -10,6 +10,7 @@ using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
+using IniParser.Model;
 using IniParserUtils = global::Utils.IniParserUtils;
 
 namespace AppManager2 {
@@ -27,6 +28,7 @@ namespace AppManager2 {
             InitNotifyIcon();
             LoadWindowGeometry();
             LoadMainTabIndex();
+            LoadSendFormConfig();
             InitAutoRunPanel();
         }
 
@@ -45,12 +47,24 @@ namespace AppManager2 {
         }
 
         /// <summary>
-        /// 保存当前选中的主Tab索引（关闭程序前调用）
+        /// 保存当前选中的主Tab索引（关闭程序前调用）：
+        /// 与Configs缓存比对，值变化才写入（Configs.SelectedIndex由LoadMainTabIndex加载）
         /// </summary>
         private void SaveMainTabIndex() {
-            if (Configs.SelectedIndex != MainTabControl.SelectedIndex) {
-                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionApp, Configs.IniKeyAppMainTabIndex, MainTabControl.SelectedIndex.ToString());
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionApp, Configs.IniKeyAppMainTabIndex, ref Configs.SelectedIndex, MainTabControl.SelectedIndex);
+            IniParserUtils.SaveIniData(SystemIniPath, iniData);
+        }
+
+        /// <summary>
+        /// 保存数据库删除计数（关闭程序前调用）：
+        /// 运行值与启动加载的初始值（PriDelCount）比对，不同才写入ini
+        /// </summary>
+        private void SaveDelCount() {
+            if (Configs.PriDelCount == Configs.DelCount) {
+                return;
             }
+            IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSet, Configs.IniKeySetDelCount, Convert.ToString(Configs.DelCount));
         }
 
         #region 自启动列表（对应老项目AutoRunAppFlowLayoutPanel逐个添加CheckBox的方式，WPF用WrapPanel实现自动换行）
@@ -154,6 +168,7 @@ namespace AppManager2 {
         /// </summary>
         private void SaveWindowGeometry() {
             // 最小化关闭：WindowState非Maximized，标记为正常状态
+            // maximized沿用"1"/"0"格式手工比对保存（加载端按"1"判断，不走ConfigIniData的True/False格式）
             var isMaximized = WindowState == WindowState.Maximized;
             if (Configs.WindowMaximized != isMaximized) {
                 IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormMaximized, isMaximized ? "1" : "0");
@@ -167,22 +182,59 @@ namespace AppManager2 {
                 var bounds = RestoreBounds;
                 x = bounds.X; y = bounds.Y; w = bounds.Width; h = bounds.Height;
             }
-            if (Configs.Height != h) {
-                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormHeight, Convert.ToInt32(h).ToString());
-                Configs.Height = Convert.ToInt32(h);
-            }
-            if (Configs.Width != w) {
-                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormWidth, Convert.ToInt32(w).ToString());
-                Configs.Width = Convert.ToInt32(w);
-            }
-            if (Configs.Left != x) {
-                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, Convert.ToInt32(x).ToString());
-                Configs.Left = Convert.ToInt32(x);
-            }
-            if (Configs.Top != y) {
-                IniParserUtils.SaveIniData(SystemIniPath, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, Convert.ToInt32(y).ToString());
-                Configs.Top = Convert.ToInt32(y);
-            }
+            // 几何值与Configs缓存比对，只有值变化才写入IniData（参考XStart2.0的ConfigIniData方式）；
+            // 无变化时IniData为空，SaveIniData不写盘
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormHeight, ref Configs.Height, Convert.ToInt32(h));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormWidth, ref Configs.Width, Convert.ToInt32(w));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, ref Configs.Left, Convert.ToInt32(x));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, ref Configs.Top, Convert.ToInt32(y));
+            IniParserUtils.SaveIniData(SystemIniPath, iniData);
+        }
+
+        #endregion
+
+        #region 发送记录窗口布局记忆（System.ini [send]，ini读写集中在主窗口）
+
+        // 启动时ini加载的初始值：主窗口关闭时与Configs运行值比对，值变化才写盘
+        // （Configs.SendForm*为运行值：发送记录窗口打开时读取恢复，关闭时回写）
+        private int _iniSendHeight;
+        private int _iniSendWidth;
+        private int _iniSendLeft;
+        private int _iniSendTop;
+        private int _iniSendSplitDis;
+
+        /// <summary>
+        /// 程序启动时把发送记录窗口的大小/位置/分栏宽度从System.ini [send]加载到Configs，
+        /// 发送记录窗口打开时直接用Configs值恢复，其关闭时只回写Configs，不写ini
+        /// </summary>
+        private void LoadSendFormConfig() {
+            var section = IniParserUtils.GetIniData(SystemIniPath)[Configs.IniSectionSend];
+            if (int.TryParse(section[Configs.IniKeyFormHeight], out var h)) Configs.SendFormHeight = h;
+            if (int.TryParse(section[Configs.IniKeyFormWidth], out var w)) Configs.SendFormWidth = w;
+            if (int.TryParse(section[Configs.IniKeyFormLocationX], out var x)) Configs.SendFormLeft = x;
+            if (int.TryParse(section[Configs.IniKeyFormLocationY], out var y)) Configs.SendFormTop = y;
+            if (int.TryParse(section[Configs.IniKeySendSplitDis], out var s)) Configs.SendSplitDis = s;
+
+            _iniSendHeight = Configs.SendFormHeight;
+            _iniSendWidth = Configs.SendFormWidth;
+            _iniSendLeft = Configs.SendFormLeft;
+            _iniSendTop = Configs.SendFormTop;
+            _iniSendSplitDis = Configs.SendSplitDis;
+        }
+
+        /// <summary>
+        /// 主窗口关闭时保存发送记录窗口布局（关闭程序前调用）：
+        /// Configs运行值与启动加载的初始值比对，值变化才写入，无变化不写盘
+        /// </summary>
+        private void SaveSendFormConfig() {
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSend, Configs.IniKeyFormHeight, ref _iniSendHeight, Configs.SendFormHeight);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSend, Configs.IniKeyFormWidth, ref _iniSendWidth, Configs.SendFormWidth);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSend, Configs.IniKeyFormLocationX, ref _iniSendLeft, Configs.SendFormLeft);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSend, Configs.IniKeyFormLocationY, ref _iniSendTop, Configs.SendFormTop);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSend, Configs.IniKeySendSplitDis, ref _iniSendSplitDis, Configs.SendSplitDis);
+            IniParserUtils.SaveIniData(SystemIniPath, iniData);
         }
 
         #endregion
@@ -285,6 +337,10 @@ namespace AppManager2 {
             // 记录项目树组的展开/收缩状态，下次启动恢复
             ViewModel?.SaveTreeExpandState();
             SaveMainTabIndex();
+            // 数据库删除计数有变化时写盘（无删除则不写）
+            SaveDelCount();
+            // 发送记录窗口布局有变化时写盘（窗口未打开/未调整则不写）
+            SaveSendFormConfig();
             if (_reallyClose) {
                 base.OnClosing(e);
                 return;
@@ -695,6 +751,18 @@ namespace AppManager2 {
                 && menu.PlacementTarget is TextBox textBox
                 && textBox.DataContext is AppRunTabItemModel tabItem) {
                 tabItem.ClearLog();
+            }
+        }
+
+        /// <summary>
+        /// 运行日志右键-切换日志换行（系统/自动/不换行）：
+        /// 子菜单项位于子菜单Popup中，其视觉树到PopupRoot即断链（GetParent为null），
+        /// FindAncestor找不到ContextMenu，改用菜单项继承的DataContext（即日志TextBox的DataContext=运行Tab模型）
+        /// </summary>
+        private void RunLogWrapMenu_Click(object sender, RoutedEventArgs e) {
+            if (!(sender is FrameworkElement item) || !(item.Tag is string wrapMode)) return;
+            if (item.DataContext is AppRunTabItemModel tabItem) {
+                ViewModel?.SetRunTabLogWrap(tabItem, wrapMode);
             }
         }
 

@@ -30,23 +30,23 @@ namespace AppManager2.Services {
         /// <summary>
         /// 运行项目：bat/exe直接执行App路径，java执行生成的start.bat
         /// </summary>
-        public void StartApp(AppSection appSection) {
+        public void StartApp(AppRecord app) {
             string cliPath;
-            switch (appSection.Type) {
+            switch (app.Type) {
                 case Configs.AppTypeJava:
-                    cliPath = AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart);
+                    cliPath = AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStart);
                     break;
                 default:
                     // bat/exe及其它类型直接执行配置的路径
-                    cliPath = appSection.App;
+                    cliPath = app.App;
                     break;
             }
 
             if (File.Exists(cliPath)) {
                 // 启动的进程跟踪stdin，允许交互输入
-                ExecuteApp(cliPath, appSection.Env, appSection.Section, true);
+                ExecuteApp(cliPath, app.Env, app.Section, true);
             } else {
-                OnLog(appSection.Section, $"文件不存在：{cliPath}");
+                OnLog(app.Section, $"文件不存在：{cliPath}");
             }
         }
 
@@ -54,32 +54,32 @@ namespace AppManager2.Services {
         /// 停止应用：先停止跟踪中的进程（stdin exit → 等待1秒 → kill），
         /// 再执行停止脚本（bat用StopApp，java用生成的stop.bat），exe类型按进程名杀进程
         /// </summary>
-        public void StopApp(AppSection appSection) {
-            StopTrackedProcess(appSection.Section, appSection.Title);
+        public void StopApp(AppRecord app) {
+            StopTrackedProcess(app.Section, app.Title);
 
-            string stopPath = appSection.Type switch {
-                Configs.AppTypeBat => appSection.StopApp,
-                Configs.AppTypeJava => AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop),
+            string stopPath = app.Type switch {
+                Configs.AppTypeBat => app.StopApp,
+                Configs.AppTypeJava => AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStop),
                 _ => string.Empty
             };
             if (!string.IsNullOrEmpty(stopPath)) {
                 if (File.Exists(stopPath)) {
                     // 停止脚本不跟踪，避免覆盖启动进程的跟踪
-                    ExecuteApp(stopPath, appSection.Env, appSection.Section, false);
+                    ExecuteApp(stopPath, app.Env, app.Section, false);
                 } else {
-                    OnLog(appSection.Section, $"文件不存在：{stopPath}");
+                    OnLog(app.Section, $"文件不存在：{stopPath}");
                 }
             } else {
                 // exe通过进程名结束
-                var existList = ProcessUtils.GetProcessByName(ProcessUtils.GetProcessName(appSection.App), appSection.App);
+                var existList = ProcessUtils.GetProcessByName(ProcessUtils.GetProcessName(app.App), app.App);
                 if (null != existList && existList.Count > 0) {
                     foreach (var p in existList) {
                         try {
-                            OnLog(appSection.Section, $"开始杀进程{appSection.Title}");
+                            OnLog(app.Section, $"开始杀进程{app.Title}");
                             p.Kill();
-                            OnLog(appSection.Section, $"杀进程{appSection.Title}成功");
+                            OnLog(app.Section, $"杀进程{app.Title}成功");
                         } catch (Exception ex) {
-                            OnLog(appSection.Section, $"杀进程{appSection.Title}失败：{ex.Message}");
+                            OnLog(app.Section, $"杀进程{app.Title}失败：{ex.Message}");
                         }
                     }
                 }

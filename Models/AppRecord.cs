@@ -57,10 +57,17 @@ namespace AppManager2.Models {
         [TableParam("is_print_log", "BIT")]
         public bool IsPrintLog { get; set; }
 
+        [TableParam("log_wrap", "VARCHAR")]
+        public string LogWrap { get; set; }
+
         [TableParam("remark", "VARCHAR")]
         public string Remark { get; set; }
 
         [TableParam("sort", "INTEGER")]
         public int Sort { get; set; }
+
+        // 运行态字段（无TableParam特性，不落库）：监控/启停时在内存中维护
+        public bool IsRunning { get; set; }
+        public short RunStat { get; set; }
     }
 }

@@ -110,9 +110,12 @@ namespace AppManager2.ViewModels {
         }
 
         private static void DeleteRecord(HttpSend httpSend) {
-            HttpSendService.Instance.Delete(httpSend.Id.Value);
-            HttpSendService.Instance.Vacuum();
+            bool deleted = HttpSendService.Instance.Delete(httpSend.Id.Value);
             HttpSendParamService.Instance.DeleteByHttpSendId(httpSend.Id);
+            if (deleted) {
+                // 只计删除数（超限执行VACUUM，见TableService.CountDbDelete）；ini在主窗口关闭时统一比对写盘
+                HttpSendService.CountDbDelete();
+            }
         }
 
         private void OnClear(object obj) {

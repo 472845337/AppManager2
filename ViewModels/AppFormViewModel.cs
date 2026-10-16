@@ -45,6 +45,9 @@ namespace AppManager2.ViewModels {
         public string WarnUrl { get; set; }
         public bool AutoRun { get; set; }
         public bool IsPrintLog { get; set; } = true;
+        // 运行日志换行：系统跟随设置-应用监控的配置，自动WrapWithOverflow，不换行NoWrap
+        public ObservableCollection<LogWrapOption> LogWrapOptions { get; set; }
+        public string LogWrap { get; set; } = Configs.LogWrapSystem;
         public string Remark { get; set; }
 
         // UI状态
@@ -82,6 +85,7 @@ namespace AppManager2.ViewModels {
             // 初始化集合
             AppTypes = new ObservableCollection<string> { Configs.AppTypeJava, Configs.AppTypeBat, Configs.AppTypeExe };
             Groups = new ObservableCollection<string>();
+            LogWrapOptions = new ObservableCollection<LogWrapOption>(LogWrapModes.AppOptions);
 
             // 初始化命令
             SaveCommand = new RelayCommand(OnSave, CanSave);
@@ -154,6 +158,7 @@ namespace AppManager2.ViewModels {
                 AutoRun = app.AutoRun;
                 Remark = app.Remark;
                 IsPrintLog = app.IsPrintLog;
+                LogWrap = string.IsNullOrEmpty(app.LogWrap) ? Configs.LogWrapSystem : app.LogWrap;
             }
         }
 
@@ -169,7 +174,7 @@ namespace AppManager2.ViewModels {
                     ? Guid.NewGuid().ToString()
                     : Section;
 
-                var appSection = new AppSection {
+                var app = new AppRecord {
                     Section = section,
                     Type = AppType,
                     Title = AppTitle?.Trim(),
@@ -189,11 +194,12 @@ namespace AppManager2.ViewModels {
                     AutoRun = AutoRun,
                     Remark = Remark?.Trim(),
                     IsPrintLog = IsPrintLog,
+                    LogWrap = LogWrap,
                     RunStat = Configs.AppRunStatUnrun,
                     IsRunning = false
                 };
 
-                SaveAppSection(appSection);
+                SaveApp(app);
                 MessageBox.Show("保存成功！", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 try { _window.DialogResult = true; } catch { /* 非模态打开时忽略 */ }
                 _window?.Close();
@@ -264,21 +270,21 @@ namespace AppManager2.ViewModels {
             return string.Join("\n", errors);
         }
 
-        private void SaveAppSection(AppSection appSection) {
+        private void SaveApp(AppRecord app) {
             // 保存到 SQLite（AppManager.db 的 t_app 表），并更新缓存、通知界面刷新
-            _appService.SaveToDb(appSection);
+            _appService.SaveToDb(app);
 
             // java项目根据jar包地址生成对应的启动/停止bat脚本
-            if (Configs.AppTypeJava.Equals(appSection.Type)) {
+            if (Configs.AppTypeJava.Equals(app.Type)) {
                 JavaAppUtils.LoadSettings();
 
-                var result = JavaAppUtils.CreateStartBat(appSection, Configs.LogFileInfo, Configs.LogFileError);
+                var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
                 if (!bool.TrueString.Equals(result)) {
                     // 应用信息已保存，脚本生成失败单独提示
                     MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                JavaAppUtils.CreateStopBat(appSection);
+                JavaAppUtils.CreateStopBat(app);
             }
         }
 
@@ -367,54 +373,6 @@ namespace AppManager2.ViewModels {
                 }
             }
             EnvParams = current;
-        }
-
-        public AppSection ToAppSection() {
-            return new AppSection {
-                Section = Section,
-                Type = AppType,
-                Title = AppTitle,
-                App = AppPath,
-                StopApp = StopPath,
-                Jdk = JdkPath,
-                Port = Port,
-                HeartBeat = HeartBeatUrl,
-                Actuator = ActuatorUrl,
-                Ext = ExtScript,
-                Param = JvmParams,
-                Env = EnvParams,
-                Profiles = Profiles,
-                Group = Group,
-                IsWarn = IsWarn,
-                WarnUrl = WarnUrl,
-                AutoRun = AutoRun,
-                Remark = Remark,
-                IsPrintLog = IsPrintLog,
-                RunStat = Configs.AppRunStatUnrun,
-                IsRunning = false
-            };
-        }
-
-        public void FromAppSection(AppSection app) {
-            Section = app.Section;
-            AppType = app.Type;
-            AppTitle = app.Title;
-            AppPath = app.App;
-            StopPath = app.StopApp;
-            JdkPath = app.Jdk;
-            Port = app.Port;
-            HeartBeatUrl = app.HeartBeat;
-            ActuatorUrl = app.Actuator;
-            ExtScript = app.Ext;
-            JvmParams = app.Param;
-            EnvParams = app.Env;
-            Profiles = app.Profiles;
-            Group = app.Group;
-            IsWarn = app.IsWarn;
-            WarnUrl = app.WarnUrl;
-            AutoRun = app.AutoRun;
-            Remark = app.Remark;
-            IsPrintLog = app.IsPrintLog;
         }
     }
 }

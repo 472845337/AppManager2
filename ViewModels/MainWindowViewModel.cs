@@ -4,6 +4,7 @@ using AppManager2.Config;
 using AppManager2.Excep;
 using AppManager2.Models;
 using AppManager2.Services;
+using IniParser.Model;
 using Newtonsoft.Json;
 using PropertyChanged;
 using System;
@@ -51,9 +52,12 @@ namespace AppManager2.ViewModels {
         public string SelectedProfile { get; set; }
         public ObservableCollection<string> ProfilesOptions { get; set; }
 
-        // 监听设置（对应老项目MonitorSetGroupBox：超时/s、频次/s）
+        // 监听设置（对应老项目MonitorSetGroupBox：超时/s、频次/s、日志换行）
         public string MonitorTimeoutText { get; set; } = "15";
         public string MonitorIntervalText { get; set; } = "5";
+        // 系统级日志换行（项目换行为“系统”时按此生效）
+        public ObservableCollection<LogWrapOption> LogWrapOptions { get; set; }
+        public string SelectedLogWrap { get; set; } = Configs.LogWrapNone;
 
         // 应用设置（对应老项目AppSetGroup：心跳字符/通知+预警地址/机器名）
         public string HeartBeatMsg { get; set; }
@@ -169,6 +173,7 @@ namespace AppManager2.ViewModels {
             RunningApps = new ObservableCollection<AppRunTabItemModel>();
             AutoRunItems = new ObservableCollection<AutoRunItemModel>();
             ProfilesOptions = new ObservableCollection<string> { "dev", "test", "prod" };
+            LogWrapOptions = new ObservableCollection<LogWrapOption>(LogWrapModes.SetOptions);
 
             InitializeCommands();
             WireEvents();
@@ -280,16 +285,16 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 校验项目配置参数：java项目不存在启动/停止bat时生成（对应老项目CheckSection）
         /// </summary>
-        private void CheckSection(AppSection appSection, bool forceUpdate) {
-            if (null == appSection) return;
-            if (Configs.AppTypeJava.Equals(appSection.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStart)))) {
-                var result = JavaAppUtils.CreateStartBat(appSection, Configs.LogFileInfo, Configs.LogFileError);
+        private void CheckSection(AppRecord app, bool forceUpdate) {
+            if (null == app) return;
+            if (Configs.AppTypeJava.Equals(app.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStart)))) {
+                var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
                 if (!bool.TrueString.Equals(result)) {
                     throw new BusinessException(result);
                 }
             }
-            if (Configs.AppTypeJava.Equals(appSection.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(appSection.Title, Configs.BatFileTypeStop)))) {
-                JavaAppUtils.CreateStopBat(appSection);
+            if (Configs.AppTypeJava.Equals(app.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStop)))) {
+                JavaAppUtils.CreateStopBat(app);
             }
         }
 
@@ -301,7 +306,6 @@ namespace AppManager2.ViewModels {
                     if (!string.IsNullOrEmpty(ratioStr) && double.TryParse(ratioStr, out var ratio)) {
                         TreeSplitRatio = Math.Max(0.1, Math.Min(0.8, ratio)); // 限制在10%-80%之间
                         RunSplitRatio = 1 - TreeSplitRatio;
-                        return;
                     }
                 }
             } catch (Exception) {
@@ -309,10 +313,14 @@ namespace AppManager2.ViewModels {
                 TreeSplitRatio = 0.25;
                 RunSplitRatio = 0.75;
             }
+            // 按保存格式缓存当前值（SaveSplitRatio保存前比对用）
+            Configs.TreeSplitRatio = TreeSplitRatio.ToString("F3");
         }
 
         private void SaveSplitRatio() {
-            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionApp, Configs.IniKeyAppSplitRatio, TreeSplitRatio.ToString("F3"));
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionApp, Configs.IniKeyAppSplitRatio, ref Configs.TreeSplitRatio, TreeSplitRatio.ToString("F3"));
+            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
         }
 
         private void OnTreeSplitRatioChanged() {
@@ -344,6 +352,30 @@ namespace AppManager2.ViewModels {
             if (string.IsNullOrEmpty(MonitorTimeoutText)) MonitorTimeoutText = "15";
             if (string.IsNullOrEmpty(MonitorIntervalText)) MonitorIntervalText = "5";
 
+            // 系统级日志换行：只认auto/none，缺省与非法值按默认不换行处理
+            var logWrap = iniData[Configs.IniSectionSet][Configs.IniKeySetLogWrap];
+            if (!Configs.LogWrapAuto.Equals(logWrap) && !Configs.LogWrapNone.Equals(logWrap)) {
+                logWrap = Configs.LogWrapNone;
+            }
+            SelectedLogWrap = logWrap;
+
+            // 各项加载到Configs缓存（SaveSettings保存前比对，值变化才写盘）
+            Configs.HeartBeat = HeartBeatMsg ?? string.Empty;
+            Configs.IsWarn = IsWarnEnabled;
+            Configs.WarnAddress = WarnUrl ?? string.Empty;
+            Configs.ServerName = ServerName ?? string.Empty;
+            Configs.JdkPath = JdkPath ?? string.Empty;
+            Configs.Profiles = SelectedProfile ?? string.Empty;
+            Configs.LogPath = LogPath ?? string.Empty;
+            Configs.TimeoutText = MonitorTimeoutText ?? string.Empty;
+            Configs.IntervalText = MonitorIntervalText ?? string.Empty;
+            Configs.LogWrap = logWrap;
+
+            // 数据库删除计数（达到阈值后执行VACUUM）：PriDelCount存启动初始值，
+            // 主窗口关闭时与DelCount比对，不同才写盘
+            Configs.PriDelCount = int.TryParse(iniData[Configs.IniSectionSet][Configs.IniKeySetDelCount], out var delCount) ? delCount : 0;
+            Configs.DelCount = Configs.PriDelCount;
+
             var closedType = iniData[Configs.IniSectionSet][Configs.IniKeySetClosedType];
             if (string.IsNullOrEmpty(closedType)) {
                 closedType = Configs.ClosedTypeExit;
@@ -366,23 +398,24 @@ namespace AppManager2.ViewModels {
             var closedType = IsClosedExit ? Configs.ClosedTypeExit : Configs.ClosedTypeMin;
             var systemIni = Configs.AppPath + "\\" + Configs.SystemIniPath;
 
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetHeartBeat, heartBeat);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetIsWarn, Convert.ToString(IsWarnEnabled));
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetWarnTo, WarnUrl ?? string.Empty);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetServerName, ServerName ?? string.Empty);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetJdkpath, JdkPath ?? string.Empty);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetProfiles, SelectedProfile ?? string.Empty);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetLogpath, LogPath ?? string.Empty);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetClosedType, closedType);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetTimeout, MonitorTimeoutText ?? string.Empty);
-            IniParserUtils.SaveIniData(systemIni, Configs.IniSectionSet, Configs.IniKeySetInterval, MonitorIntervalText ?? string.Empty);
+            // 与Configs缓存比对，只有值变化才写入IniData（参考XStart2.0的ConfigIniData方式）；
+            // 无变化时IniData为空，SaveIniData不写盘
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetHeartBeat, ref Configs.HeartBeat, heartBeat);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetIsWarn, ref Configs.IsWarn, IsWarnEnabled);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetWarnTo, ref Configs.WarnAddress, WarnUrl ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetServerName, ref Configs.ServerName, ServerName ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetJdkpath, ref Configs.JdkPath, JdkPath ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetProfiles, ref Configs.Profiles, SelectedProfile ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogpath, ref Configs.LogPath, LogPath ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetClosedType, ref Configs.ClosedType, closedType);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTimeout, ref Configs.TimeoutText, MonitorTimeoutText ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetInterval, ref Configs.IntervalText, MonitorIntervalText ?? string.Empty);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogWrap, ref Configs.LogWrap, SelectedLogWrap ?? Configs.LogWrapNone);
+            IniParserUtils.SaveIniData(systemIni, iniData);
 
-            // 静态值同步
-            Configs.ClosedType = closedType;
-            Configs.IsWarn = IsWarnEnabled;
-            Configs.WarnAddress = WarnUrl;
-            Configs.ServerName = ServerName;
-            JavaAppUtils.LoadSettings(); // JdkPath/Profiles/LogPath重新从ini加载
+            // 静态值同步（Configs.*已由上面的比对更新），JdkPath/Profiles/LogPath重新从ini加载
+            JavaAppUtils.LoadSettings();
             _monitorService.HeartBeatMsg = string.IsNullOrEmpty(heartBeat) ? Configs.HeartBeatMsg : heartBeat;
 
             if (int.TryParse(MonitorTimeoutText, out var timeout) && timeout > 0) {
@@ -392,6 +425,9 @@ namespace AppManager2.ViewModels {
                 Configs.MonitorInterval = interval;
                 _monitorService.UpdateInterval(); // 频次立即生效
             }
+
+            // 系统换行配置变化后，项目为“系统”模式的运行Tab按新配置生效
+            RefreshRunTabsWrapping();
 
             ShowMessage("保存成功", Brushes.Green);
         }
@@ -408,7 +444,8 @@ namespace AppManager2.ViewModels {
             return !string.Equals(JdkPath ?? string.Empty, JavaAppUtils.JdkPath ?? string.Empty)
                 || !string.Equals(SelectedProfile ?? string.Empty, JavaAppUtils.Profiles ?? string.Empty)
                 || !string.Equals(LogPath ?? string.Empty, JavaAppUtils.LogPath ?? string.Empty)
-                || !string.Equals(closedType, Configs.ClosedType);
+                || !string.Equals(closedType, Configs.ClosedType)
+                || !string.Equals(SelectedLogWrap ?? string.Empty, Configs.LogWrap);
         }
 
         /// <summary>
@@ -620,6 +657,8 @@ namespace AppManager2.ViewModels {
             try {
                 var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
                 var collapsed = iniData[Configs.IniSectionApp][Configs.IniKeyAppTreeCollapsed];
+                // 缓存原始值（SaveTreeExpandState保存前比对用）
+                Configs.TreeCollapsed = collapsed ?? string.Empty;
                 if (!string.IsNullOrEmpty(collapsed)) {
                     foreach (var name in collapsed.Split('|')) {
                         if (!string.IsNullOrEmpty(name)) {
@@ -642,8 +681,10 @@ namespace AppManager2.ViewModels {
                     .Where(n => n.Flag == Configs.NodeFlagGroup && !n.IsExpanded && !string.IsNullOrEmpty(n.GroupName))
                     .Select(n => n.GroupName)
                     .ToList();
-                IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionApp,
-                    Configs.IniKeyAppTreeCollapsed, string.Join("|", collapsed));
+                var iniData = new IniData();
+                IniParserUtils.ConfigIniData(iniData, Configs.IniSectionApp, Configs.IniKeyAppTreeCollapsed,
+                    ref Configs.TreeCollapsed, string.Join("|", collapsed));
+                IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
             } catch (Exception) {
                 // 保存失败不影响关闭流程
             }
@@ -679,7 +720,7 @@ namespace AppManager2.ViewModels {
 
                         app.Sort = sort++;
                         app.Group = newGroup;
-                        _appService.UpdateAppSection(app.Section, app);
+                        _appService.UpdateApp(app.Section, app);
 
                         var record = AppDbService.Instance.GetBySection(app.Section);
                         if (record != null) {
@@ -713,7 +754,7 @@ namespace AppManager2.ViewModels {
         }
 
         /// <summary>编辑后原地更新节点属性（不动节点实例，展开状态/选中不受影响）</summary>
-        private void UpdateChildNode(TreeItemModel node, AppSection app) {
+        private void UpdateChildNode(TreeItemModel node, AppRecord app) {
             node.Name = app.Title;
             node.ImageKey = GetImageKey(app.Type);
             node.Icon = GetNodeIcon(app);
@@ -725,7 +766,7 @@ namespace AppManager2.ViewModels {
             node.BackgroundBrush = GetStatBrush(app.RunStat);
         }
 
-        private TreeItemModel CreateChildNode(AppSection app, string group) {
+        private TreeItemModel CreateChildNode(AppRecord app, string group) {
             return new TreeItemModel {
                 Name = app.Title,
                 Flag = Configs.NodeFlagChild,
@@ -758,7 +799,7 @@ namespace AppManager2.ViewModels {
             };
         }
 
-        private ImageSource GetNodeIcon(AppSection app) {
+        private ImageSource GetNodeIcon(AppRecord app) {
             if (Configs.AppTypeExe.Equals(app.Type)) {
                 // exe类型优先使用exe内嵌图标（对应老项目ExeIconUtils.GetIconImage）
                 return ExeIconUtils.GetIconImage(app.App) ?? ExeDefaultIcon;
@@ -968,7 +1009,7 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 启动应用：状态置为启动中，创建运行Tab并执行进程（对应老项目BtnRightStartClick + CliWrapUtils.AppStart）
         /// </summary>
-        private void StartApp(AppSection app, bool selectTab) {
+        private void StartApp(AppRecord app, bool selectTab) {
             app.RunStat = Configs.AppRunStatRunning;
             UpdateRunStat(app.Section, Configs.AppRunStatRunning, app.IsRunning);
             EnsureTab(app, selectTab);
@@ -978,7 +1019,7 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 自启动（监控初始化时触发，状态已由监控置为启动中）
         /// </summary>
-        private void AutoStartApp(AppSection app) {
+        private void AutoStartApp(AppRecord app) {
             EnsureTab(app, true);
             _runService.StartApp(app);
         }
@@ -988,7 +1029,7 @@ namespace AppManager2.ViewModels {
         /// 配置了actuator地址的先调用监控的shutdown接口，失败时询问是否改用脚本停止；
         /// 未配置的直接走脚本/进程停止
         /// </summary>
-        private async void StopApp(AppSection app) {
+        private async void StopApp(AppRecord app) {
             // 状态设置为停止中
             app.RunStat = Configs.AppRunStatStopping;
             UpdateRunStat(app.Section, Configs.AppRunStatStopping, app.IsRunning);
@@ -1016,7 +1057,7 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 脚本停止：先结束跟踪中的进程，再执行停止脚本/exe按进程名杀（对应老项目CliWrapUtils.AppStop）
         /// </summary>
-        private void ScriptStop(AppSection app) {
+        private void ScriptStop(AppRecord app) {
             EnsureTab(app, true);
             _runService.StopApp(app);
         }
@@ -1086,7 +1127,7 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 获取应用对应的运行Tab，不存在时创建（对应老项目CreateAppRunTabPage）
         /// </summary>
-        private AppRunTabItemModel EnsureTab(AppSection app, bool select) {
+        private AppRunTabItemModel EnsureTab(AppRecord app, bool select) {
             var tab = RunningApps.FirstOrDefault(t => t.Section == app.Section);
             if (tab == null) {
                 tab = new AppRunTabItemModel {
@@ -1097,10 +1138,42 @@ namespace AppManager2.ViewModels {
                 };
                 RunningApps.Add(tab);
             }
+            // 运行日志换行：项目配置的模式 + 按系统配置解析后的实际TextWrapping
+            tab.LogWrap = app.LogWrap;
+            tab.LogWrapping = Configs.ResolveLogWrapping(app.LogWrap);
             if (select) {
                 SelectedTabIndex = RunningApps.IndexOf(tab);
             }
             return tab;
+        }
+
+        /// <summary>
+        /// 系统换行配置变化后刷新运行Tab的实际换行（项目为“系统”模式的跟随新配置）
+        /// </summary>
+        private void RefreshRunTabsWrapping() {
+            foreach (var tab in RunningApps) {
+                var app = _appService.GetAppBySection(tab.Section);
+                tab.LogWrap = app?.LogWrap;
+                tab.LogWrapping = Configs.ResolveLogWrapping(app?.LogWrap);
+            }
+        }
+
+        /// <summary>
+        /// 运行日志右键切换项目换行模式：更新Tab展示并持久化到数据库（对应警报右键切换的入库方式）
+        /// </summary>
+        public void SetRunTabLogWrap(AppRunTabItemModel tab, string wrapMode) {
+            var app = _appService.GetAppBySection(tab.Section);
+            if (app == null) return;
+
+            app.LogWrap = wrapMode;
+            tab.LogWrap = wrapMode;
+            tab.LogWrapping = Configs.ResolveLogWrapping(wrapMode);
+
+            var record = AppDbService.Instance.GetBySection(app.Section);
+            if (record != null) {
+                record.LogWrap = wrapMode;
+                AppDbService.Instance.SaveApp(record);
+            }
         }
 
         private AppRunTabItemModel FindTab(string section) {
@@ -1228,7 +1301,7 @@ namespace AppManager2.ViewModels {
             var groupNode = AppTree.FirstOrDefault(n => n.Flag == Configs.NodeFlagGroup && n.GroupName == group);
             if (groupNode == null) return;
 
-            var appList = _appService.GetAllSectionDic()?.Values.ToList() ?? new List<AppSection>();
+            var appList = _appService.GetAllSectionDic()?.Values.ToList() ?? new List<AppRecord>();
             var runningNum = 0;
             var unrunNum = 0;
             var failNum = 0;
@@ -1423,24 +1496,24 @@ namespace AppManager2.ViewModels {
                 var openFileDialog = new Microsoft.Win32.OpenFileDialog { Filter = @"Amp Files(*.amp)|*amp" };
                 if (openFileDialog.ShowDialog() != true) return;
 
-                Dictionary<string, AppSection> appSectionDic;
+                Dictionary<string, AppRecord> appDic;
                 try {
                     var encryptContent = File.ReadAllText(openFileDialog.FileName, new UTF8Encoding(false));
                     var content = AesUtils.DecryptContent(encryptContent);
-                    appSectionDic = JsonConvert.DeserializeObject<Dictionary<string, AppSection>>(content);
+                    appDic = JsonConvert.DeserializeObject<Dictionary<string, AppRecord>>(content);
                 } catch (System.Exception ex) {
                     MessageBox.Show($"文件解析失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
                     continue;
                 }
 
-                if (appSectionDic == null || appSectionDic.Count == 0) {
+                if (appDic == null || appDic.Count == 0) {
                     MessageBox.Show(@"所选文件无配置项,请重新选择", @"提示", MessageBoxButton.OK, MessageBoxImage.Information);
                     continue;
                 }
 
                 string isOverride = null;
                 var importNum = 0;
-                foreach (var item in appSectionDic) {
+                foreach (var item in appDic) {
                     var app = item.Value;
                     if (app == null) continue;
                     var existSection = FindExistSection(app);
@@ -1466,7 +1539,7 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 按标题+类型+路径+端口查找本地已存在的相同配置
         /// </summary>
-        private string FindExistSection(AppSection app) {
+        private string FindExistSection(AppRecord app) {
             foreach (var entry in _appService.GetAllSectionDic()) {
                 var exist = entry.Value;
                 if (exist == null) continue;
@@ -1484,7 +1557,14 @@ namespace AppManager2.ViewModels {
         /// <summary>
         /// 保存导入的项目：入库+更新缓存+生成java脚本（对应老项目SaveProject）
         /// </summary>
-        private void SaveProject(AppSection app) {
+        private void SaveProject(AppRecord app) {
+            // 清空导出文件带来的库表字段：id为导出端库的主键，留着会与本库自增主键冲突
+            app.Id = null;
+            app.CreateTime = null;
+            app.UpdateTime = null;
+            if (string.IsNullOrEmpty(app.LogWrap)) {
+                app.LogWrap = Configs.LogWrapSystem;
+            }
             app.RunStat = Configs.AppRunStatUnrun;
             app.IsRunning = false;
             _appService.SaveToDb(app);

@@ -1,4 +1,5 @@
-﻿using PropertyChanged;
+﻿using AppManager2.Config;
+using PropertyChanged;
 using System;
 using System.Text;
 
@@ -20,6 +21,11 @@ namespace AppManager2.Models {
         public bool IsRunning { get; set; }
         public bool IsClosed { get; set; }
         public DateTime StartTime { get; set; }
+
+        // 运行日志换行：LogWrap为项目配置的模式（system/auto/none，右键菜单切换勾选用），
+        // LogWrapping为按系统配置解析后的实际TextWrapping（TextBox绑定用）
+        public string LogWrap { get; set; } = Configs.LogWrapSystem;
+        public System.Windows.TextWrapping LogWrapping { get; set; } = System.Windows.TextWrapping.NoWrap;
 
         public AppRunTabItemModel() {
             LogContent = string.Empty;

@@ -19,6 +19,7 @@
             <con:AppTypeToColorConverter x:Key="AppTypeToColorConverter"/>
             <con:InverseBoolConverter x:Key="InverseBoolConverter"/>
             <con:HalfConverter x:Key="HalfConverter"/>
+            <con:StringEqualityConverter x:Key="StringEqualityConverter"/>
             
             <!-- 表单标题样式 -->
             <Style x:Key="FormLabel_Style" TargetType="TextBlock">

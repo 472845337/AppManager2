@@ -1,3 +1,4 @@
+using AppManager2.Config;
 using AppManager2.CustomEnum;
 using AppManager2.DataBase;
 using AppManager2.Models;
@@ -17,26 +18,70 @@ namespace AppManager2.Services {
         }
 
         /// <summary>
-        /// 根据实体上的 Table/TableParam 特性自动建表（表不存在时创建）
+        /// 建表与补列（参考XStart2.0的InitTable）：表不存在时按实体特性建表；
+        /// 表已存在时对比实体列与PRAGMA table_info，实体有而表缺的列自动ALTER补齐
         /// </summary>
         public virtual void EnsureTable() {
-            var buf = new System.Text.StringBuilder();
-            buf.Append("CREATE TABLE IF NOT EXISTS ").Append(GetTableName()).Append(" (");
+            var tableName = GetTableName();
+            if (!_dbHelper.TableExists(tableName)) {
+                CreateTable(tableName);
+            } else {
+                // SQLite数据库添加新增的列
+                var addColumnList = new List<string>();
+                var nameList = GetTableColumns(tableName);
+                foreach (var prop in typeof(T).GetProperties()) {
+                    var paramAttr = prop.GetCustomAttributes(typeof(TableParam), false).FirstOrDefault() as TableParam;
+                    if (paramAttr == null) continue;
 
+                    if (nameList.Contains(paramAttr.Name)) continue;
+                    var sb = new System.Text.StringBuilder();
+                    sb.Append(paramAttr.Name).Append(" ").Append(paramAttr.Type);
+                    if (paramAttr.IsPrimaryKey) {
+                        sb.Append(" PRIMARY KEY AUTOINCREMENT");
+                    }
+                    addColumnList.Add(sb.ToString());
+                }
+                if (addColumnList.Count > 0) {
+                    foreach (var addColumn in addColumnList) {
+                        _dbHelper.ExecuteNonQuery($"ALTER TABLE {tableName} ADD COLUMN {addColumn}", null);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// 按实体TableParam特性建表（对应XStart2.0的CreateTable）
+        /// </summary>
+        private void CreateTable(string tableName) {
+            var sb = new System.Text.StringBuilder();
             foreach (var prop in typeof(T).GetProperties()) {
                 var paramAttr = prop.GetCustomAttributes(typeof(TableParam), false).FirstOrDefault() as TableParam;
                 if (paramAttr == null) continue;
 
-                buf.Append(paramAttr.Name).Append(" ").Append(paramAttr.Type);
-                if (paramAttr.IsPrimaryKey) {
-                    buf.Append(" PRIMARY KEY AUTOINCREMENT");
+                if (sb.Length > 0) {
+                    sb.Append(", ");
                 }
-                buf.Append(",");
+                sb.Append(paramAttr.Name).Append(" ").Append(paramAttr.Type);
+                if (paramAttr.IsPrimaryKey) {
+                    sb.Append(" PRIMARY KEY AUTOINCREMENT");
+                }
             }
-            buf.Remove(buf.Length - 1, 1);
-            buf.Append(")");
+            var createSql = new System.Text.StringBuilder("CREATE TABLE ").Append(tableName).Append(" (").Append(sb).Append(")");
+            _dbHelper.ExecuteNonQuery(createSql.ToString(), null);
+        }
 
-            _dbHelper.ExecuteNonQuery(buf.ToString(), null);
+        /// <summary>
+        /// 查询表现有列名（PRAGMA table_info，对应XStart2.0的GetTableParam）
+        /// </summary>
+        private List<string> GetTableColumns(string tableName) {
+            var nameList = new List<string>();
+            var ds = _dbHelper.ExecuteDataSet($"PRAGMA table_info('{tableName}')", null);
+            if (ds != null && ds.Tables.Count > 0) {
+                foreach (DataRow row in ds.Tables[0].Rows) {
+                    nameList.Add(Convert.ToString(row["name"]));
+                }
+            }
+            return nameList;
         }
 
         public virtual long Insert(T entity) {
@@ -101,6 +146,20 @@ namespace AppManager2.Services {
 
         public virtual bool Vacuum() {
             return _dbHelper.Vacuum();
+        }
+
+        /// <summary>
+        /// 数据库删除计数（各表Service共用，全库一个计数）：
+        /// DelCount超过阈值时执行VACUUM收缩数据库文件并清零重计（参考XStart2.0的DelCount）。
+        /// 只计数不写ini：主窗口关闭时与启动加载的PriDelCount比对，值变化才持久化
+        /// </summary>
+        public static void CountDbDelete() {
+            if (Configs.DelCount > Configs.DelCountLimit) {
+                Configs.DelCount = 0;
+                _dbHelper.Vacuum();
+            } else {
+                Configs.DelCount += 1;
+            }
         }
 
         protected virtual string GetTableName() {

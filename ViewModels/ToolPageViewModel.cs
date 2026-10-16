@@ -4,6 +4,7 @@ using AppManager2.CustomEnum;
 using AppManager2.Excep;
 using AppManager2.Models;
 using AppManager2.Services;
+using IniParser.Model;
 using PropertyChanged;
 using System;
 using System.Collections.Generic;
@@ -129,6 +130,12 @@ namespace AppManager2.ViewModels {
             if (!string.IsNullOrEmpty(timeout)) {
                 TimeoutText = timeout;
             }
+            // 各项按保存格式缓存到Configs（保存前比对，值变化才写盘）
+            Configs.ToolSplitPct = Convert.ToInt32(ClampSplitPercent(ParamSplitPercent));
+            Configs.ToolSplitPctHead = Convert.ToInt32(ClampSplitPercent(HeadSplitPercent));
+            Configs.SaveHttpRequest = SaveHttpRequest;
+            Configs.ToolIsTimeout = IsTimeoutEnabled;
+            Configs.ToolTimeout = TimeoutText ?? string.Empty;
         }
 
         /// <summary>分隔百分比合法区间：过小/过大都会挤没另一侧</summary>
@@ -139,23 +146,30 @@ namespace AppManager2.ViewModels {
             return Math.Max(SplitPercentMin, Math.Min(SplitPercentMax, value));
         }
 
-        /// <summary>分隔器拖动结束后由View调用，保存两处分隔百分比（对应老项目SplitterMoved）</summary>
+        /// <summary>分隔器拖动结束后由View调用，保存两处分隔百分比（对应老项目SplitterMoved）：
+        /// 与Configs缓存比对，值变化才写盘</summary>
         public void SaveSplitHeights() {
-            var iniPath = Configs.AppPath + "\\" + Configs.SystemIniPath;
-            IniParserUtils.SaveIniData(iniPath, Configs.IniSectionTool, Configs.IniKeyToolSplitPct, Convert.ToInt32(ClampSplitPercent(ParamSplitPercent)).ToString());
-            IniParserUtils.SaveIniData(iniPath, Configs.IniSectionTool, Configs.IniKeyToolSplitPctHead, Convert.ToInt32(ClampSplitPercent(HeadSplitPercent)).ToString());
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionTool, Configs.IniKeyToolSplitPct,
+                ref Configs.ToolSplitPct, Convert.ToInt32(ClampSplitPercent(ParamSplitPercent)));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionTool, Configs.IniKeyToolSplitPctHead,
+                ref Configs.ToolSplitPctHead, Convert.ToInt32(ClampSplitPercent(HeadSplitPercent)));
+            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
         }
 
-        /// <summary>超时选项变化即时持久化（对应老项目is-timeout/timeout键）</summary>
+        /// <summary>超时选项变化即时持久化（对应老项目is-timeout/timeout键）：与Configs缓存比对，值变化才写盘</summary>
         public void SaveTimeoutSetting() {
-            var iniPath = Configs.AppPath + "\\" + Configs.SystemIniPath;
-            IniParserUtils.SaveIniData(iniPath, Configs.IniSectionTool, Configs.IniKeyToolIsTimeout, Convert.ToString(IsTimeoutEnabled));
-            IniParserUtils.SaveIniData(iniPath, Configs.IniSectionTool, Configs.IniKeyToolTimeout, TimeoutText ?? string.Empty);
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionTool, Configs.IniKeyToolIsTimeout, ref Configs.ToolIsTimeout, IsTimeoutEnabled);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionTool, Configs.IniKeyToolTimeout, ref Configs.ToolTimeout, TimeoutText ?? string.Empty);
+            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
         }
 
-        /// <summary>记录请求配置变化即时持久化（对应老项目save-http-request键）</summary>
+        /// <summary>记录请求配置变化即时持久化（对应老项目save-http-request键）：与Configs缓存比对，值变化才写盘</summary>
         public void SaveSaveHttpRequestSetting() {
-            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionTool, Configs.IniKeySaveHttpRequest, Convert.ToString(SaveHttpRequest));
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionTool, Configs.IniKeySaveHttpRequest, ref Configs.SaveHttpRequest, SaveHttpRequest);
+            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
         }
 
         private void OnHttpTypeChanged() {

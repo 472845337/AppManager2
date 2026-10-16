@@ -248,9 +248,8 @@
                 <GroupBox Grid.Row="4" Header="其他配置">
                     <Grid>
                         <Grid.RowDefinitions>
-                            <RowDefinition/>
-                            <RowDefinition/>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition/>
                             <RowDefinition/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
@@ -262,6 +261,13 @@
                             <CheckBox Style="{StaticResource FormValue_Style}" Content="警报" IsChecked="{Binding IsWarn}" IsEnabled="{Binding IsEditMode}"/>
                             <CheckBox Style="{StaticResource FormValue_Style}" Content="自动启动" IsChecked="{Binding AutoRun}" IsEnabled="{Binding IsEditMode}"/>
                             <CheckBox Style="{StaticResource FormValue_Style}" Content="控制面板日志" IsChecked="{Binding IsPrintLog}" IsEnabled="{Binding IsEditMode}"/>
+                            <!-- 运行日志换行：系统/自动/不换行 -->
+                            <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Column="0" Grid.Row="2" Text="换行" VerticalAlignment="Center"/>
+                            <ComboBox Style="{StaticResource FormValue_Style}" Grid.Column="1" Grid.Row="2" Width="90" HorizontalAlignment="Left"
+          ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+          SelectedValue="{Binding LogWrap}"
+          IsEnabled="{Binding IsEditMode}"
+          ToolTip="运行日志换行方式，系统=跟随设置-应用监控的日志换行配置"/>
                         </StackPanel>
                         <!-- 预警机器人配置输入框 -->
                         <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Column="0" Grid.Row="1" Text="预 警:" VerticalAlignment="Top"/>
@@ -271,9 +277,10 @@
      Height="50" TextWrapping="Wrap" AcceptsReturn="True"
      Template="{StaticResource PlaceHolder}" Tag="异常停止预警企业微信机器人URL">
                         </TextBox>
+                        
                         <!-- 备注输入框 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="3" Grid.Column="0" Text="备 注:" VerticalAlignment="Top"/>
-                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="3" Grid.Column="1"
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="2" Grid.Column="0" Text="备 注:" VerticalAlignment="Top"/>
+                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="2" Grid.Column="1"
      Text="{Binding Remark, UpdateSourceTrigger=PropertyChanged}"
      IsReadOnly="{Binding IsDetailMode}"
      Height="50" TextWrapping="Wrap" AcceptsReturn="True"

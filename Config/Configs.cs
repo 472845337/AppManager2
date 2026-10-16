@@ -6,10 +6,7 @@ namespace AppManager2.Config {
         public const string AuthorEmail = "1320311706@qq.com";
 
         public const string PathCharacter = "\\";
-        public const string ProjectsIniPath = "ini\\Projects.ini";
         public const string SystemIniPath = "ini\\System.ini";
-        public const string RecycleIniPath = "ini\\recycle.ini";
-        public const string WeixinIniPath = "ini\\weixin.ini";
 
         public const string BatPath = "bat\\";
         public const string BatFileTypeStart = "start";
@@ -78,6 +75,10 @@ namespace AppManager2.Config {
         public const string IniKeySetTimeout = "timeout";
         public const string IniKeySetInterval = "interval";
         public const string IniKeySetClosedType = "closed_type";
+        // 设置-应用监控组的日志换行（运行日志TextWrapping的系统配置）
+        public const string IniKeySetLogWrap = "log_wrap";
+        // 数据库累计删除次数（达到阈值后执行VACUUM，保存于System.ini [set]）
+        public const string IniKeySetDelCount = "DelCount";
 
         public const string IniKeyAppType = "type";
         public const string IniKeyAppTitle = "title";
@@ -98,6 +99,11 @@ namespace AppManager2.Config {
         public const string IniKeyAppWarnUrl = "warnUrl";
         public const string IniKeyAppRemark = "remark";
         public const string IniKeyAppAutoRun = "auto_run";
+
+        // 项目运行日志换行模式（t_app.log_wrap）：system跟随系统配置 / auto自动换行 / none不换行
+        public const string LogWrapSystem = "system";
+        public const string LogWrapAuto = "auto";
+        public const string LogWrapNone = "none";
 
         public const string IniKeyWeixinAppId = "appId";
         public const string IniKeyWeixinSecret = "secret";
@@ -124,9 +130,32 @@ namespace AppManager2.Config {
         public const string SwitchOn = "on";
         public const string SwitchOff = "off";
 
+        // [set] 系统级日志换行配置（auto/none，默认不换行）：项目换行为“系统”时按此值生效
+        public static string LogWrap = LogWrapNone;
+
+        /// <summary>
+        /// 项目换行模式解析为实际TextWrapping：空/“system”取系统配置，
+        /// “auto”→WrapWithOverflow，其余（含“none”）→NoWrap
+        /// </summary>
+        public static System.Windows.TextWrapping ResolveLogWrapping(string appLogWrap) {
+            var mode = string.IsNullOrEmpty(appLogWrap) || LogWrapSystem.Equals(appLogWrap)
+                ? LogWrap
+                : appLogWrap;
+            return LogWrapAuto.Equals(mode)
+                ? System.Windows.TextWrapping.WrapWithOverflow
+                : System.Windows.TextWrapping.NoWrap;
+        }
+
         public static int MonitorInterval = 5;
         public const int HttpDefaultTimeout = 15;
         public static int MonitorTimeout = 15;
+
+        // 数据库删除计数：超过阈值后执行VACUUM收缩数据库文件并清零重计（参考XStart2.0的delCount）
+        public const int DelCountLimit = 100;
+        // 启动时从ini加载的初始计数（主窗口关闭时与DelCount比对，不同才写盘）
+        public static int PriDelCount;
+        // 运行期计数：删除数据后递增，超限清零并执行VACUUM
+        public static int DelCount;
 
         public static bool SaveHttpRequest = false;
 
@@ -145,5 +174,29 @@ namespace AppManager2.Config {
         public static bool WindowMaximized;
 
         public static int SelectedIndex;
+
+        // —— System.ini 参数缓存：启动时加载到Configs，保存前与缓存比对，值变化才写盘（参考XStart2.0的ConfigIniData方式）——
+        // [app]
+        public static string TreeSplitRatio; // split_ratio（按保存格式F3缓存）
+        public static string TreeCollapsed;  // tree_collapsed（|分隔的收缩组名单）
+        // [set]
+        public static string HeartBeat;    // heartbeat（区别于默认值常量HeartBeatMsg）
+        public static string JdkPath;      // JDKPath
+        public static string Profiles;     // profiles
+        public static string LogPath;      // LogPath
+        public static string TimeoutText;  // timeout（监控超时原文）
+        public static string IntervalText; // interval（监控间隔原文）
+        // [tool]
+        public static int ToolSplitPct;     // split-pct
+        public static int ToolSplitPctHead; // split-pct-head
+        public static bool ToolIsTimeout;   // is-timeout
+        public static string ToolTimeout;   // timeout
+        // [send]（发送记录窗口）运行值：主窗口启动时从ini加载，发送记录窗口关闭时回写，
+        // 主窗口关闭时与启动初始值比对写盘（初始值快照存MainWindow）
+        public static int SendSplitDis;   // split-dis
+        public static int SendFormHeight; // height
+        public static int SendFormWidth;  // width
+        public static int SendFormLeft;   // location_x
+        public static int SendFormTop;    // location_y
     }
 }

@@ -80,7 +80,7 @@ namespace AppManager2.ViewModels {
                 return;
             }
 
-            var exportDic = new LinkedHashMap<string, AppSection>();
+            var exportDic = new LinkedHashMap<string, AppRecord>();
             foreach (var section in checkedList) {
                 var app = _appService.GetAppBySection(section);
                 if (app == null) {
