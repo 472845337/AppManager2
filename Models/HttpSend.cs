@@ -1,4 +1,4 @@
-using AppManager2.CustomEnum;
+using SqliteUtils;
 using System.Collections.Generic;
 
 namespace AppManager2.Models {

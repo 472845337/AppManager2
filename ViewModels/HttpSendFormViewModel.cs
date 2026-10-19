@@ -137,16 +137,16 @@ namespace AppManager2.ViewModels {
         }
 
         private static void DeleteRecord(HttpSend httpSend) {
-            bool deleted = HttpSendService.Instance.Delete(httpSend.Id.Value);
+            bool deleted = HttpSendService.Instance.DeleteById(httpSend.Id);
             HttpSendParamService.Instance.DeleteByHttpSendId(httpSend.Id);
             if (deleted) {
-                // 只计删除数（超限执行VACUUM，见TableService.CountDbDelete）；ini在主窗口关闭时统一比对写盘
-                HttpSendService.CountDbDelete();
+                // 只计删除数（超限执行VACUUM，见DbMaintenance.CountDbDelete）；ini在主窗口关闭时统一比对写盘
+                DbMaintenance.CountDbDelete();
             }
         }
 
         private void OnClear(object obj) {
-            var allList = HttpSendService.Instance.SelectList();
+            var allList = HttpSendService.Instance.GetAll();
             var favoriteCount = allList.Count(item => item.IsFavorite);
             var keepTip = favoriteCount > 0 ? $"（将保留{favoriteCount}条收藏记录）" : string.Empty;
             if (MessageBoxResult.OK != MessageBox.Show($"确认清空所有未收藏的发送记录？{keepTip}", "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
@@ -244,7 +244,7 @@ namespace AppManager2.ViewModels {
         /// </summary>
         private void OnDeduplicateUrl(object obj) {
             var existDic = new Dictionary<string, bool>();
-            foreach (var single in HttpSendService.Instance.SelectList()) {
+            foreach (var single in HttpSendService.Instance.GetAll()) {
                 if (single.IsFavorite) continue;
                 if (existDic.ContainsKey(single.Url)) {
                     DeleteRecord(single);
@@ -261,7 +261,7 @@ namespace AppManager2.ViewModels {
         /// </summary>
         private void OnDeduplicateParam(object obj) {
             var existDic = new Dictionary<string, bool>();
-            foreach (var single in HttpSendService.Instance.SelectList()) {
+            foreach (var single in HttpSendService.Instance.GetAll()) {
                 if (single.IsFavorite) continue;
                 var existKey = GetHttpSendKey(single);
                 if (existDic.ContainsKey(existKey)) {
@@ -298,7 +298,7 @@ namespace AppManager2.ViewModels {
         /// 异常去重：去除所有非200的记录（收藏记录跳过，始终保留）
         /// </summary>
         private void OnDeduplicateError(object obj) {
-            foreach (var single in HttpSendService.Instance.SelectList()) {
+            foreach (var single in HttpSendService.Instance.GetAll()) {
                 if (!single.IsFavorite && !"200".Equals(single.Code)) {
                     DeleteRecord(single);
                 }

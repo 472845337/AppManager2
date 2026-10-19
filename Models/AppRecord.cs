@@ -1,4 +1,4 @@
-using AppManager2.CustomEnum;
+using SqliteUtils;
 
 namespace AppManager2.Models {
     [Table("t_app")]

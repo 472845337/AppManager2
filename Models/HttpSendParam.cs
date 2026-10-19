@@ -1,4 +1,4 @@
-﻿using AppManager2.CustomEnum;
+﻿using SqliteUtils;
 
 namespace AppManager2.Models {
     [Table("http_send_param")]

@@ -8,6 +8,10 @@ namespace AppManager2.Config {
         public const string PathCharacter = "\\";
         public const string SystemIniPath = "ini\\System.ini";
 
+        // 数据库文件名（由 App 启动时 SqliteConfig.Init 配置，SqliteUtils 会在程序运行目录下自动建库）
+        public const string DbName = "AppManager.db";
+        public const string DbPassword = "r4PdXkFrCvPyMCk4KNG3";
+
         public const string BatPath = "bat\\";
         public const string BatFileTypeStart = "start";
         public const string BatFileNameStart = "_start.bat";

@@ -44,8 +44,8 @@ namespace AppManager2.Services {
             RemoveAppBySection(section);
             AppListChanged?.Invoke();
             if (deleted) {
-                // 删除计数（超限执行VACUUM，见TableService.CountDbDelete）
-                AppDbService.CountDbDelete();
+                // 删除计数（超限执行VACUUM，见DbMaintenance.CountDbDelete）
+                DbMaintenance.CountDbDelete();
             }
         }
 
