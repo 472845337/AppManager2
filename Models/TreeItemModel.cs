@@ -59,6 +59,7 @@ namespace AppManager2.Models {
         public ICommand WarnOffCommand { get; set; }
         public ICommand StartCommand { get; set; }
         public ICommand StopCommand { get; set; }
+        public ICommand ResetRunStatCommand { get; set; }
         public ICommand EditCommand { get; set; }
         public ICommand DeleteCommand { get; set; }
         public ICommand LocateFileCommand { get; set; }

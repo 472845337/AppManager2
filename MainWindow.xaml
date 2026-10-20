@@ -81,6 +81,24 @@
                     <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/stop.ico" Width="16" Height="16"/>
                 </MenuItem.Icon>
             </MenuItem>
+            <!-- 重置状态：程序在软件外异常退出时监控持续判失败（橙色+刷app is fail），
+                 仅Fail状态显示，标识回初始未运行（白色）；若程序实际在运行，下轮监控自动恢复 -->
+            <MenuItem Header="重置状态" Command="{Binding ResetRunStatCommand}" CommandParameter="{Binding}"
+                      ToolTip="程序异常退出后将状态标识为初始未运行">
+                <MenuItem.Icon>
+                    <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/fresh.ico" Width="16" Height="16"/>
+                </MenuItem.Icon>
+                <MenuItem.Style>
+                    <Style TargetType="MenuItem">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding RunStat}" Value="-1">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </MenuItem.Style>
+            </MenuItem>
             <Separator/>
             <MenuItem Header="编辑" Command="{Binding EditCommand}" CommandParameter="{Binding}">
                 <MenuItem.Icon>

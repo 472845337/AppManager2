@@ -329,9 +329,48 @@ namespace AppManager2 {
         /// <summary>
         /// 关闭按钮点击后，退出还是最小化（对应老项目Form1_Closing）：
         /// 保存的关闭方式为退出时，检查未保存的最小化选项与环境配置修改；
-        /// 为最小化时，隐藏到托盘（通过托盘图标恢复或退出）
+        /// 为最小化时，最小化并保留任务栏图标（托盘图标同样可恢复/退出）
         /// </summary>
         protected override void OnClosing(CancelEventArgs e) {
+            
+            if (!_reallyClose) {
+                if (Configs.ClosedTypeMin.Equals(Configs.ClosedType)) {
+                    // 最小化：用最小化代替Hide（Hide会连任务栏按钮一起移除），任务栏图标保留
+                    WindowState = WindowState.Minimized;
+                    e.Cancel = true;
+                    // 托盘气泡提示已最小化（超时时间Win10起由系统Toast决定，传值仅作兼容）
+                    _notifyIcon?.ShowBalloonTip(3000, "应用管理", "应用管理已最小化", System.Windows.Forms.ToolTipIcon.Info);
+                    return;
+                } else {
+                    var vm = ViewModel;
+                    if (vm != null) {
+                        if (vm.IsClosedMin) {
+                            // 该选项未保存
+                            MessageBox.Show("关闭最小化设置未保存！", "提醒", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            e.Cancel = true;
+                            return;
+                        }
+                        if (vm.HasUnsavedEnvChanges()) {
+                            var result = MessageBox.Show("存在未保存的参数,是否保存？", "警告",
+                                MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+                            if (result == MessageBoxResult.Cancel) {
+                                // 不退出
+                                e.Cancel = true;
+                                return;
+                            }
+                            if (result == MessageBoxResult.Yes) {
+                                // 保存并退出
+                                vm.SaveSettings();
+                            }
+                        }
+                    }
+                }
+            }
+            PreCloseSaveData();
+            base.OnClosing(e);
+        }
+
+        private void PreCloseSaveData() {
             // 所有关闭路径（退出/托盘退出/最小化隐藏）都记录当前窗口位置和尺寸
             SaveWindowGeometry();
             // 记录项目树组的展开/收缩状态，下次启动恢复
@@ -341,47 +380,6 @@ namespace AppManager2 {
             SaveDelCount();
             // 发送记录窗口布局有变化时写盘（窗口未打开/未调整则不写）
             SaveSendFormConfig();
-            if (_reallyClose) {
-                base.OnClosing(e);
-                return;
-            }
-
-            var vm = ViewModel;
-            if (vm != null) {
-                if (Configs.ClosedTypeExit.Equals(Configs.ClosedType)) {
-                    if (vm.IsClosedMin) {
-                        // 该选项未保存
-                        MessageBox.Show("关闭最小化设置未保存！", "提醒", MessageBoxButton.OK, MessageBoxImage.Warning);
-                        e.Cancel = true;
-                        return;
-                    }
-                    if (vm.HasUnsavedEnvChanges()) {
-                        var result = MessageBox.Show("存在未保存的参数,是否保存？", "警告",
-                            MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
-                        if (result == MessageBoxResult.Cancel) {
-                            // 不退出
-                            e.Cancel = true;
-                            return;
-                        }
-                        if (result == MessageBoxResult.Yes) {
-                            // 保存并退出
-                            vm.SaveSettings();
-                        }
-                    }
-                } else {
-                    if (vm.IsClosedExit) {
-                        // 该选项未保存
-                        MessageBox.Show("关闭退出设置未保存！", "提醒", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    } else {
-                        // 最小化：隐藏到托盘
-                        Hide();
-                        ShowInTaskbar = false;
-                    }
-                    e.Cancel = true;
-                    return;
-                }
-            }
-            base.OnClosing(e);
         }
 
         private void RegisterEvents() {

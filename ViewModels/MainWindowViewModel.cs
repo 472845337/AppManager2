@@ -113,6 +113,7 @@ namespace AppManager2.ViewModels {
         public RelayCommand DeleteAppCommand { get; set; }
         public RelayCommand StartAppCommand { get; set; }
         public RelayCommand StopAppCommand { get; set; }
+        public ICommand ResetRunStatCommand { get; set; }
         public ICommand RefreshAppCommand { get; set; }
         public ICommand AllStartCommand { get; set; }
         public ICommand AllStopCommand { get; set; }
@@ -201,6 +202,7 @@ namespace AppManager2.ViewModels {
             DeleteAppCommand = new RelayCommand(OnDeleteApp, CanEditOrDeleteApp);
             StartAppCommand = new RelayCommand(OnStartApp, CanStartApp);
             StopAppCommand = new RelayCommand(OnStopApp, CanStopApp);
+            ResetRunStatCommand = new RelayCommand(OnResetRunStat);
             RefreshAppCommand = new RelayCommand(OnRefreshApp);
             AllStartCommand = new RelayCommand(OnAllStart);
             AllStopCommand = new RelayCommand(OnAllStop);
@@ -783,6 +785,7 @@ namespace AppManager2.ViewModels {
                 WarnSwitchCommand = WarnSwitchAppCommand,
                 StartCommand = StartAppCommand,
                 StopCommand = StopAppCommand,
+                ResetRunStatCommand = ResetRunStatCommand,
                 EditCommand = EditAppCommand,
                 DeleteCommand = DeleteAppCommand,
                 LocateFileCommand = LocateFileCommand,
@@ -1004,6 +1007,25 @@ namespace AppManager2.ViewModels {
             if (app == null) return;
 
             StopApp(app);
+        }
+
+        /// <summary>
+        /// 重置运行状态为未运行：程序在软件外异常退出/中断后，监控会持续判失败
+        /// （一直刷app is fail并重复预警，节点保持橙色）；手动标识为初始未运行后，
+        /// 监控不再判失败（若程序实际仍在运行，下轮监控会自动恢复绿色）
+        /// </summary>
+        private void OnResetRunStat(object obj) {
+            var node = GetNode(obj);
+            if (node == null || string.IsNullOrEmpty(node.Section))
+                return;
+
+            var app = _appService.GetAppBySection(node.Section);
+            if (app == null) return;
+
+            app.RunStat = Configs.AppRunStatUnrun;
+            app.IsRunning = false;
+            UpdateRunStat(app.Section, Configs.AppRunStatUnrun, false); // 刷新节点颜色/Tab/组聚合色
+            ShowMessage($"已将{node.Name}标识为未运行", Brushes.Green);
         }
 
         /// <summary>
