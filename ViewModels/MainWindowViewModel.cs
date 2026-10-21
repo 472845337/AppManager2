@@ -1215,11 +1215,13 @@ namespace AppManager2.ViewModels {
         }
 
         /// <summary>
-        /// 脚本停止：先结束跟踪中的进程，再执行停止脚本/exe按进程名杀（对应老项目CliWrapUtils.AppStop）
+        /// 脚本停止：先结束跟踪中的进程，再执行停止脚本/exe按进程名杀（对应老项目CliWrapUtils.AppStop）；
+        /// 进程退出等待（WaitForExit最长1秒）、强杀、停止脚本启动都较慢，放线程池执行避免卡UI
+        /// （与启动一致：界面只负责置状态和建Tab，立即返回）；日志经LogReceived→RunOnUi切回UI线程
         /// </summary>
         private void ScriptStop(AppRecord app) {
             EnsureTab(app, true);
-            _runService.StopApp(app);
+            Task.Run(() => _runService.StopApp(app));
         }
 
         private void OnGroupStart(object obj) {
