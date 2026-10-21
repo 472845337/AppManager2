@@ -10,15 +10,24 @@
         mc:Ignorable="d"
         Title="应用管理" Height="500" Width="600"
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/main.ico"
-        WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip">
+        WindowStartupLocation="CenterScreen" ResizeMode="CanResizeWithGrip"
+        FontFamily="{DynamicResource AppFontFamily}"
+        FontSize="{DynamicResource AppFontSize}"
+        Foreground="{DynamicResource AppFontColor}">
     <Window.DataContext>
         <vm:MainWindowViewModel/>
     </Window.DataContext>
     <Window.Resources>
         <Style TargetType="TabItem">
             <Setter Property="Padding" Value="5 5"/>
-            <Setter Property="FontSize" Value="15"/>
         </Style>
+        <!-- 颜色下拉选项模板：色块+颜色名（软件设置的字体/日志颜色选择） -->
+        <DataTemplate x:Key="ColorItemTemplate">
+            <StackPanel Orientation="Horizontal">
+                <Rectangle Width="14" Height="14" Margin="0,0,5,0" Stroke="#999" Fill="{Binding Brush}"/>
+                <TextBlock Text="{Binding Name}"/>
+            </StackPanel>
+        </DataTemplate>
         <Style TargetType="GridViewColumnHeader">
             <Setter Property="Padding" Value="0 5"/>
         </Style>
@@ -181,6 +190,9 @@
                         </Grid.RowDefinitions>
                         <TreeView Grid.Row="0" x:Name="AppTreeView" ItemsSource="{Binding AppTree}" DockPanel.Dock="Top"
                                       Background="Transparent"
+                                      FontFamily="{DynamicResource TreeFontFamily}"
+                                      FontSize="{DynamicResource TreeFontSize}"
+                                      Foreground="{DynamicResource TreeFontColor}"
                                       SelectedItemChanged="TreeView_SelectedItemChanged"
                                       PreviewMouseLeftButtonUp="AppTreeView_PreviewMouseLeftButtonUp"
                                       GotKeyboardFocus="AppTreeView_KeyboardFocusChanged"
@@ -195,7 +207,8 @@
                                 <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                                     <StackPanel Orientation="Horizontal" Margin="5">
                                         <Image Source="{Binding Icon}" Width="16" Height="16" Margin="0,0,4,0" VerticalAlignment="Center"/>
-                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" ToolTip="{Binding Remark}" FontSize="16"/>
+                                        <!-- 节点名不设字号，随应用树的TreeFontSize设置 -->
+                                        <TextBlock Text="{Binding Name}" VerticalAlignment="Center" ToolTip="{Binding Remark}"/>
                                         <TextBlock Text="{Binding RunStatText}" Foreground="Gray" FontSize="11"
                                                        Margin="6,0,0,0" VerticalAlignment="Center"/>
                                     </StackPanel>
@@ -206,6 +219,9 @@
                                     <!-- 展开/收缩状态存于节点模型（双向），新增项目到收缩组时由VM定向展开该组 -->
                                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}"/>
                                     <Setter Property="Background" Value="{Binding BackgroundBrush}"/>
+                                    <!-- TreeViewItem主题样式自带的Foreground setter优先级高于继承值，
+                                         不显式设置时树的字色设置不生效；选中变白的模板触发器优先级更高，不受影响 -->
+                                    <Setter Property="Foreground" Value="{DynamicResource TreeFontColor}"/>
                                     <!-- 自定义模板：Bd根Border横向铺满整行，状态背景色覆盖整行，点击行内任意位置（含展开符区域）均可选中 -->
                                     <Setter Property="Template">
                                         <Setter.Value>
@@ -413,8 +429,8 @@
                                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
                                                 TextWrapping="{Binding LogWrapping}"
                                                  FontSize="{Binding LogFontSize}"
-                                                 FontFamily="Consolas"
-                                                 Background="Black" Foreground="White" BorderThickness="0"
+                                                 FontFamily="{DynamicResource LogFontFamily}"
+                                                 Background="{DynamicResource LogBgColor}" Foreground="{DynamicResource LogFontColor}" BorderThickness="0"
                                                  PreviewMouseWheel="RunLogTextBox_PreviewMouseWheel"
                                                  behaviors:TextBoxAutoScroll.AutoScroll="True">
                                         <TextBox.ContextMenu>
@@ -442,137 +458,286 @@
             </TabItem>
 
             <TabItem Header="设置" Width="80">
-                <!-- 对应老项目SetPage：应用设置/环境配置/自启动/监听/关闭时
-                     布局对应老版锚定方式：上部两个GroupBox随宽度拉伸，自启动框四边拉伸（占剩余空间），监听/关闭时固定右上 -->
-                <Grid Margin="10">
+                <Grid>
                     <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*" MinHeight="120"/>
+                        <RowDefinition/>
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
+                    <TabControl x:Name="SettingTabControl" SelectedIndex="{Binding SettingTabControlSelectedIndex, Mode=TwoWay}" Grid.Row="0" TabStripPlacement="Left">
+                        <TabItem Header="应用设置">
+                            <!-- 对应老项目SetPage：应用设置/环境配置/自启动/监听/关闭时
+布局对应老版锚定方式：上部两个GroupBox随宽度拉伸，自启动框四边拉伸（占剩余空间），监听/关闭时固定右上 -->
+                            <Grid Margin="10">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="*" MinHeight="120"/>
+                                </Grid.RowDefinitions>
 
-                    <!-- 应用设置：心跳字符/通知+预警地址/机器名 -->
-                    <GroupBox Grid.Row="0" Header="应用设置">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="80"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
+                                <!-- 监听设置：心跳字符/通知+预警地址/机器名 -->
+                                <GroupBox Grid.Row="0" Header="预警设置">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
 
-                            <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="心跳字符:" VerticalAlignment="Center"/>
-                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1" Text="{Binding HeartBeatMsg, UpdateSourceTrigger=PropertyChanged}"
-                                         Template="{StaticResource PlaceHolder}" Tag="心跳接口返回的预期内容，默认success"/>
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="心跳字符:" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1" Text="{Binding HeartBeatMsg, UpdateSourceTrigger=PropertyChanged}"
+                    Template="{StaticResource PlaceHolder}" Tag="心跳接口返回的预期内容，默认success"/>
 
-                            <CheckBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="0" Content="通 知:" IsChecked="{Binding IsWarnEnabled}" VerticalAlignment="Center"/>
-                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="1" Text="{Binding WarnUrl, UpdateSourceTrigger=PropertyChanged}"
-                                         Template="{StaticResource PlaceHolder}" Tag="预警地址（企业微信机器人地址）"/>
+                                        <CheckBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="0" Content="通  知:" IsChecked="{Binding IsWarnEnabled}" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="1" Text="{Binding WarnUrl, UpdateSourceTrigger=PropertyChanged}"
+                    Template="{StaticResource PlaceHolder}" Tag="预警地址（企业微信机器人地址）"/>
 
-                            <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="2" Grid.Column="0" Text="机 器 名:" VerticalAlignment="Center"/>
-                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="2" Grid.Column="1" Text="{Binding ServerName, UpdateSourceTrigger=PropertyChanged}"
-                                         Template="{StaticResource PlaceHolder}" Tag="预警时展示的服务器名，便于区分机器，留空使用本机IP"/>
-                        </Grid>
-                    </GroupBox>
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="2" Grid.Column="0" Text="机  器  名:" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="2" Grid.Column="1" Text="{Binding ServerName, UpdateSourceTrigger=PropertyChanged}"
+                    Template="{StaticResource PlaceHolder}" Tag="预警时展示的服务器名，便于区分机器，留空使用本机IP"/>
+                                    </Grid>
+                                </GroupBox>
 
-                    <!-- 环境配置：Jdk/配置(dev|test|prod)/日志 -->
-                    <GroupBox Grid.Row="1" Header="环境配置">
-                        <Grid>
-                            <Grid.RowDefinitions>
-                                <RowDefinition Height="Auto"/>
-                                <RowDefinition Height="Auto"/>
-                            </Grid.RowDefinitions>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="60"/>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
+                                <!-- 环境配置：Jdk/配置(dev|test|prod)/日志 -->
+                                <GroupBox Grid.Row="1" Header="环境配置">
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
 
-                            <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="J D K:" VerticalAlignment="Center"/>
-                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding JdkPath, UpdateSourceTrigger=PropertyChanged}"
-                                         Template="{StaticResource PlaceHolder}" Tag="JDK根目录，生成启动脚本使用"/>
-                            <Button Style="{StaticResource Btn_Info}" Grid.Row="0" Grid.Column="4" Content="..." Command="{Binding BrowseJdkCommand}"
-                                        ToolTip="选择JDK目录"/>
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="J D K:" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1" Grid.ColumnSpan="3" Text="{Binding JdkPath, UpdateSourceTrigger=PropertyChanged}"
+                    Template="{StaticResource PlaceHolder}" Tag="JDK根目录，生成启动脚本使用"/>
+                                        <Button Style="{StaticResource Btn_Info}" Grid.Row="0" Grid.Column="4" Content="..." Command="{Binding BrowseJdkCommand}"
+                   ToolTip="选择JDK目录"/>
 
-                            <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="0" Text="配 置:" VerticalAlignment="Center"/>
-                            <ComboBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="1" Width="90" HorizontalAlignment="Left"
-                                          ItemsSource="{Binding ProfilesOptions}" SelectedItem="{Binding SelectedProfile}"
-                                          ToolTip="启动环境，生成java启动脚本的spring.profiles.active"/>
-                            <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="2" Text="日志:" VerticalAlignment="Center"/>
-                            <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="3" Text="{Binding LogPath, UpdateSourceTrigger=PropertyChanged}"
-                                         Template="{StaticResource PlaceHolder}" Tag="运行日志输出目录"/>
-                            <Button Style="{StaticResource Btn_Info}" Grid.Row="1" Grid.Column="4" Content="..." Command="{Binding BrowseLogCommand}"
-                                        ToolTip="选择日志目录"/>
-                        </Grid>
-                    </GroupBox>
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="0" Text="配  置:" VerticalAlignment="Center"/>
+                                        <ComboBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="1" Width="90" HorizontalAlignment="Left"
+                     ItemsSource="{Binding ProfilesOptions}" SelectedItem="{Binding SelectedProfile}"
+                     ToolTip="启动环境，生成java启动脚本的spring.profiles.active"/>
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="2" Text="日  志:" VerticalAlignment="Center"/>
+                                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="3" Text="{Binding LogPath, UpdateSourceTrigger=PropertyChanged}"
+                    Template="{StaticResource PlaceHolder}" Tag="运行日志输出目录"/>
+                                        <Button Style="{StaticResource Btn_Info}" Grid.Row="1" Grid.Column="4" Content="..." Command="{Binding BrowseLogCommand}"
+                   ToolTip="选择日志目录"/>
+                                    </Grid>
+                                </GroupBox>
 
-                    <Grid Grid.Row="2" Margin="0,0,0,10">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="10"/>
-                            <ColumnDefinition Width="260"/>
-                        </Grid.ColumnDefinitions>
+                                <Grid Grid.Row="2">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="260"/>
+                                    </Grid.ColumnDefinitions>
 
-                        <!-- 自启动：全选+项目自启动项（与项目编辑中的自启动联动），随窗口四边拉伸 -->
-                        <GroupBox Grid.Column="0">
-                            <GroupBox.Header>
-                                <StackPanel Orientation="Horizontal">
-                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="自启动"/>
-                                    <CheckBox Style="{StaticResource FormValue_Style}" Content="全选" IsChecked="{Binding AutoRunAll}"/>
-                                </StackPanel>
-                            </GroupBox.Header>
-                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
-                                <!-- 自启动项由code-behind逐个添加（监听AutoRunItems集合变化），
-                                             WrapPanel超出宽度自动换行（横向滚动必须保持禁用，否则内容宽度不受限不会换行） -->
-                                <WrapPanel x:Name="AutoRunPanel" Margin="5"/>
-                            </ScrollViewer>
-                        </GroupBox>
+                                    <!-- 自启动：全选+项目自启动项（与项目编辑中的自启动联动），随窗口四边拉伸 -->
+                                    <GroupBox Grid.Column="0">
+                                        <GroupBox.Header>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="自启动"/>
+                                                <CheckBox Style="{StaticResource FormValue_Style}" Content="全选" IsChecked="{Binding AutoRunAll}"/>
+                                            </StackPanel>
+                                        </GroupBox.Header>
+                                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                            <!-- 自启动项由code-behind逐个添加（监听AutoRunItems集合变化），
+                        WrapPanel超出宽度自动换行（横向滚动必须保持禁用，否则内容宽度不受限不会换行） -->
+                                            <WrapPanel x:Name="AutoRunPanel" Margin="5"/>
+                                        </ScrollViewer>
+                                    </GroupBox>
 
-                        <!-- 监听/关闭时：固定宽度，顶部对齐，不随窗口变化 -->
-                        <StackPanel Grid.Column="2" VerticalAlignment="Top">
-                            <!-- 监听：端口/心跳判定的超时时间与频次 -->
-                            <GroupBox Header="应用监控" Padding="10" Margin="0,0,0,10">
-                                <WrapPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="超时/s"/>
-                                        <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}"
-                                             Template="{StaticResource PlaceHolder}" Tag="15" Width="50"/>
+                                    <!-- 监听/关闭时：固定宽度，顶部对齐，不随窗口变化 -->
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                                        <!-- 监听：端口/心跳判定的超时时间与频次 -->
+                                        <GroupBox Header="应用监控" Padding="5" Margin="10,5,0,10">
+                                            <WrapPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="超时/s"/>
+                                                    <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}"
+                        Template="{StaticResource PlaceHolder}" Tag="15" Width="50"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="频次/s"/>
+                                                    <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}"
+                        Template="{StaticResource PlaceHolder}" Tag="5" Width="50"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="日志换行"/>
+                                                    <!-- 系统级换行配置（[set] log_wrap，默认不换行）：项目换行为“系统”时按此生效 -->
+                                                    <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                             ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+                             SelectedValue="{Binding SelectedLogWrap}"
+                             ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
+                                                </StackPanel>
+                                            </WrapPanel>
+                                        </GroupBox>
                                     </StackPanel>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="频次/s"/>
-                                        <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}"
-                                             Template="{StaticResource PlaceHolder}" Tag="5" Width="50"/>
+                                </Grid>
+
+                            </Grid>
+                        </TabItem>
+                        <TabItem Header="软件设置">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                            <WrapPanel Margin="10">
+                                <!-- 界面字体：全局所有控件 + 按钮（保存于System.ini [set]，保存后即时生效） -->
+                                <GroupBox Header="界面字体" Padding="8" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="全局字体:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
+                                                      SelectedItem="{Binding GlobalFontFamily}"
+                                                      ToolTip="软件所有控件的字体类型"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
+                                                      SelectedItem="{Binding GlobalFontSizeText}"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="100"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
+                                                      SelectedValuePath="Name" SelectedValue="{Binding GlobalFontColor}"
+                                                      ItemTemplate="{StaticResource ColorItemTemplate}"
+                                                      ToolTip="软件所有控件的字体颜色"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="按钮字体:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
+                                                      SelectedItem="{Binding BtnFontFamily}"
+                                                      ToolTip="软件中所有按钮的字体类型"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
+                                                      SelectedItem="{Binding BtnFontSizeText}"/>
+                                        </StackPanel>
                                     </StackPanel>
+                                </GroupBox>
+
+                                <!-- 应用树：应用管理Tab左侧项目树 -->
+                                <GroupBox Header="应用树" Padding="8" Margin="0,0,8,8">
                                     <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="日志换行"/>
-                                        <!-- 系统级换行配置（[set] log_wrap，默认不换行）：项目换行为“系统”时按此生效 -->
-                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="90"
-                                                  ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
-                                                  SelectedValue="{Binding SelectedLogWrap}"
-                                                  ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
+                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       体:"/>
+                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                  ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
+                                                  SelectedItem="{Binding TreeFontFamily}"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
+                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                  ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
+                                                  SelectedItem="{Binding TreeFontSizeText}"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
+                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="100"
+                                                  ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
+                                                  SelectedValuePath="Name" SelectedValue="{Binding TreeFontColor}"
+                                                  ItemTemplate="{StaticResource ColorItemTemplate}"/>
                                     </StackPanel>
+                                </GroupBox>
+
+                                <!-- 日志：应用监听运行日志与工具Tab的HTTP响应日志；
+                                     字号为启动初始值，Ctrl+滚轮在其基础上临时调整 -->
+                                <GroupBox Header="日志" Padding="8" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       体:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
+                                                      SelectedItem="{Binding LogFontFamily}"
+                                                      ToolTip="运行日志与HTTP响应日志的字体类型"/>
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
+                                                      SelectedItem="{Binding LogFontSizeText}"
+                                                      ToolTip="启动时的初始字号，运行中Ctrl+滚轮临时缩放"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
+                                                      SelectedValuePath="Name" SelectedValue="{Binding LogFontColor}"
+                                                      ItemTemplate="{StaticResource ColorItemTemplate}"
+                                                      ToolTip="应用监听日志与HTTP响应日志的字体颜色"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="背  景  色:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="100"
+                                                      ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
+                                                      SelectedValuePath="Name" SelectedValue="{Binding LogBgColor}"
+                                                      ItemTemplate="{StaticResource ColorItemTemplate}"
+                                                      ToolTip="应用监听日志与HTTP响应日志的背景色"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                <!-- 预览：随上面各下拉当前值即时刷新（保存前即可看到效果） -->
+                                <GroupBox Header="预览" Padding="8" Margin="0,0,8,8">
+                                    <StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="全       局:" VerticalAlignment="Center"/>
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="应用管理 ABCabc123" VerticalAlignment="Center"
+                                                       FontFamily="{Binding GlobalFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
+                                                       FontSize="{Binding GlobalFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=12}"
+                                                       Foreground="{Binding GlobalFontColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="按       钮:" VerticalAlignment="Center"/>
+                                            <!-- 本地FontFamily/FontSize覆盖按钮样式的DynamicResource，预览未保存的值 -->
+                                            <Button Content="按钮字体预览" Style="{StaticResource Btn_Pri}"
+                                                    FontFamily="{Binding BtnFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
+                                                    FontSize="{Binding BtnFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=14}"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="应  用  树:" VerticalAlignment="Center"/>
+                                            <TreeView Margin="2 5" Width="200" BorderThickness="1" BorderBrush="#ddd" Background="White"
+                                                      FontFamily="{Binding TreeFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
+                                                      FontSize="{Binding TreeFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=16}"
+                                                      Foreground="{Binding TreeFontColor, Converter={StaticResource StringToBrushConverter}}">
+                                                <TreeView.ItemContainerStyle>
+                                                    <!-- 同主界面应用树：覆盖TreeViewItem主题样式的Foreground，否则预览字色不生效 -->
+                                                    <Style TargetType="TreeViewItem">
+                                                        <Setter Property="Foreground" Value="{Binding TreeFontColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                                    </Style>
+                                                </TreeView.ItemContainerStyle>
+                                                <TreeViewItem Header="示例分组" IsExpanded="True">
+                                                    <TreeViewItem Header="示例应用"/>
+                                                </TreeViewItem>
+                                            </TreeView>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="日       志:" VerticalAlignment="Top"/>
+                                            <TextBox Style="{StaticResource FormValue_Style}" Width="300" IsReadOnly="True"
+                                                     FontFamily="{Binding LogFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
+                                                     FontSize="{Binding LogFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=14}"
+                                                     Text="INFO : 应用启动成功"
+                                                     Foreground="{Binding LogFontColor, Converter={StaticResource StringToBrushConverter}}"
+                                                     Background="{Binding LogBgColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                        </StackPanel>
+                                    </StackPanel>
+                                </GroupBox>
+                                <!-- 关闭时：退出/最小化 -->
+                                <GroupBox Header="关闭时" Padding="10" Margin="0,0,10,10">
+                                    <StackPanel Orientation="Horizontal">
+                                        <RadioButton Content="退出" GroupName="ClosedType" IsChecked="{Binding IsClosedExit}" Margin="0,0,20,0"/>
+                                        <RadioButton Content="最小化" GroupName="ClosedType" IsChecked="{Binding IsClosedMin}"/>
+                                    </StackPanel>
+                                </GroupBox>
+
+                                
                                 </WrapPanel>
-                            </GroupBox>
-
-                            <!-- 关闭时：退出/最小化 -->
-                            <GroupBox Header="关闭时" Padding="10">
-                                <StackPanel Orientation="Horizontal">
-                                    <RadioButton Content="退出" GroupName="ClosedType" IsChecked="{Binding IsClosedExit}" Margin="0,0,20,0"/>
-                                    <RadioButton Content="最小化" GroupName="ClosedType" IsChecked="{Binding IsClosedMin}"/>
-                                </StackPanel>
-                            </GroupBox>
-                        </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
+                    <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
+                        <!-- 恢复默认：重置软件设置各项为初始默认值（点击后先确认） -->
+                        <Button Margin="2 2" Style="{StaticResource Btn_Warn}" Content="恢复默认" Command="{Binding ResetSoftwareSettingsCommand}" Height="36" VerticalAlignment="Bottom" ToolTip="恢复软件设置（关闭方式/字体/颜色）为默认值"/>
+                        <Button Margin="2 2" Grid.Row="1" Style="{StaticResource Btn_Pri}" Content="保存" Command="{Binding SaveSettingsCommand}" Height="36" HorizontalAlignment="Right"/>
+                    </StackPanel>
                     </Grid>
-
-                    <Button Grid.Row="3" Style="{StaticResource Btn_Pri}" Content="保存" Command="{Binding SaveSettingsCommand}"
-                            Width="60" Height="36" HorizontalAlignment="Right"/>
-                </Grid>
             </TabItem>
 
             <TabItem Header="工具" Width="80">
@@ -584,16 +749,15 @@
 
             </TabItem>
             <TabItem Header="帮助" Width="80" Loaded="HelpTab_Loaded">
-                <!-- 对应老项目HelpPage：读取doc\help.rtf只读显示 -->
+                <!-- 对应老项目HelpPage：读取doc\help.rtf只读显示（字体随全局设置） -->
                 <RichTextBox x:Name="HelpRichTextBox" IsReadOnly="True"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                             Background="White" BorderThickness="0" Padding="10"
-                             FontFamily="微软雅黑" FontSize="13"/>
+                             Background="White" BorderThickness="0" Padding="10"/>
             </TabItem>
         </TabControl>
 
-        <!-- 状态栏：左=瞬时提示（对应OperateMessageStatusLabel），右=IP/作者 -->
-        <StatusBar Grid.Row="1" FontSize="14">
+        <!-- 状态栏：左=瞬时提示（对应OperateMessageStatusLabel），右=IP/作者（字体随全局设置） -->
+        <StatusBar Grid.Row="1">
             <StatusBarItem HorizontalAlignment="Left" Margin="10 0 0 0">
                 <TextBlock Text="{Binding OperateMessage}" Foreground="{Binding OperateMessageBrush}"/>
             </StatusBarItem>

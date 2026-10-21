@@ -540,7 +540,7 @@ namespace AppManager2 {
                 group = string.Empty;
             } else {
                 if (ReferenceEquals(targetNode, moveNode)) return;
-                var (isUp, atTop, atMiddle) = GetDropPosition(targetItem, e.GetPosition(targetItem));
+                GetDropPosition(targetItem, e.GetPosition(targetItem), out var isUp, out var atTop, out var atMiddle);
 
                 if (Configs.NodeFlagGroup.Equals(targetNode.Flag) && !isGroupMove) {
                     // 子节点拖到组节点：上1/3放组前、中间入组内末尾、下1/3放组后
@@ -623,8 +623,12 @@ namespace AppManager2 {
         /// <summary>
         /// 落点在目标行内的位置：组节点用三段（上1/3/中/下1/3），项目节点用上下两半
         /// （对应老项目按targetNode.Bounds计算locationStat/isUp）
+        /// 注意：这里刻意用 out 参数而不是元组返回值——C# 元组依赖 System.ValueTuple，
+        /// 该类型 .NET 4.7 才并入 mscorlib；程序若在只装 .NET 4.6 的服务器上运行，
+        /// JIT 本方法时会抛 System.TypeLoadException 导致拖拽松手即崩溃。
         /// </summary>
-        private static (bool isUp, bool atTop, bool atMiddle) GetDropPosition(TreeViewItem item, Point posInItem) {
+        private static void GetDropPosition(TreeViewItem item, Point posInItem,
+            out bool isUp, out bool atTop, out bool atMiddle) {
             // 用头部行高度计算（展开的组节点整高包含子级，不能用）
             double h, rel;
             if (item.Template?.FindName("PART_Header", item) is ContentPresenter header && header.ActualHeight > 0) {
@@ -635,10 +639,9 @@ namespace AppManager2 {
                 h = item.ActualHeight;
                 rel = posInItem.Y;
             }
-            var isUp = rel >= 0 && rel < h / 2;
-            var atTop = rel >= 0 && rel < h / 3;
-            var atMiddle = rel >= h / 3 && rel < h * 2 / 3;
-            return (isUp, atTop, atMiddle);
+            isUp = rel >= 0 && rel < h / 2;
+            atTop = rel >= 0 && rel < h / 3;
+            atMiddle = rel >= h / 3 && rel < h * 2 / 3;
         }
 
         /// <summary>查找节点所在的集合（根级返回根集合）</summary>

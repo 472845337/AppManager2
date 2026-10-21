@@ -1,4 +1,5 @@
-﻿using AppManager2.Config;
+﻿using AppManager2.AMUtils;
+using AppManager2.Config;
 using System;
 using System.Windows;
 using System.Windows.Controls;
@@ -12,6 +13,7 @@ namespace AppManager2.Views {
     public partial class HttpSendFormWindow : Window {
         public HttpSendFormWindow() {
             InitializeComponent();
+            ThemeUtils.ApplyToWindow(this); // 全局字体/字色（独立窗口不随主窗口资源更新，构造时按Configs设置）
             RestoreFromConfigs();
         }
 
@@ -26,7 +28,12 @@ namespace AppManager2.Views {
             if (Configs.SendFormWidth > 0) Width = Configs.SendFormWidth;
             if (Configs.SendFormLeft != 0) Left = Configs.SendFormLeft;
             if (Configs.SendFormTop != 0) Top = Configs.SendFormTop;
-            if (Configs.SendSplitDis > 0) ListColumn.Width = new GridLength(Configs.SendSplitDis);
+            // 列宽为星号(*)比例布局，ini仍按左列像素宽记忆：按当前窗口宽换算为左列权重（右列固定5*）。
+            // 客户区与窗口宽的边框差约十几像素，对恢复后的比例影响可忽略
+            if (Configs.SendSplitDis > 0) {
+                double rightPx = Width - 5 - Configs.SendSplitDis;   // 5为分隔条列
+                if (rightPx > 0) ListColumn.Width = new GridLength(5.0 * Configs.SendSplitDis / rightPx, GridUnitType.Star);
+            }
         }
 
         /// <summary>
@@ -34,7 +41,7 @@ namespace AppManager2.Views {
         /// 不写ini，主窗口关闭时统一保存
         /// </summary>
         private void Splitter_DragCompleted(object sender, DragCompletedEventArgs e) {
-            Configs.SendSplitDis = Convert.ToInt32(ListColumn.Width.Value);
+            Configs.SendSplitDis = Convert.ToInt32(ListColumn.ActualWidth);   // 星号布局下Width.Value只是权重，须存实际像素
         }
 
         /// <summary>

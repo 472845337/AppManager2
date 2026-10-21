@@ -84,6 +84,20 @@ namespace AppManager2.Config {
         // 数据库累计删除次数（达到阈值后执行VACUUM，保存于System.ini [set]）
         public const string IniKeySetDelCount = "DelCount";
 
+        // 界面字体/颜色设置（保存于System.ini [set]，ThemeUtils加载并应用到资源）
+        public const string IniKeySetFontFamily = "font_family";       // 全局字体
+        public const string IniKeySetFontSize = "font_size";           // 全局字号
+        public const string IniKeySetFontColor = "font_color";         // 全局字色
+        public const string IniKeySetBtnFontFamily = "btn_font_family"; // 按钮字体
+        public const string IniKeySetBtnFontSize = "btn_font_size";    // 按钮字号
+        public const string IniKeySetTreeFontFamily = "tree_font_family"; // 应用树字体
+        public const string IniKeySetTreeFontSize = "tree_font_size";  // 应用树字号
+        public const string IniKeySetTreeFontColor = "tree_font_color"; // 应用树字色
+        public const string IniKeySetLogFontColor = "log_font_color";  // 运行/响应日志字色
+        public const string IniKeySetLogBgColor = "log_bg_color";      // 运行/响应日志背景色
+        public const string IniKeySetLogFontSize = "log_font_size";    // 运行/响应日志字号（启动初始值）
+        public const string IniKeySetLogFontFamily = "log_font_family"; // 运行/响应日志字体
+
         public const string IniKeyAppType = "type";
         public const string IniKeyAppTitle = "title";
         public const string IniKeyAppPath = "app";
@@ -202,5 +216,22 @@ namespace AppManager2.Config {
         public static int SendFormWidth;  // width
         public static int SendFormLeft;   // location_x
         public static int SendFormTop;    // location_y
+
+        // [set] 界面字体/颜色运行值（ThemeUtils启动时加载，设置页保存后即时应用）：
+        // 颜色为颜色名或#RRGGBB，经ColorConverter解析，非法值回落默认
+        public static string GlobalFontFamily = DefaultFontFamily; // 全局字体（所有控件）
+        public static int GlobalFontSize = 12;                     // 全局字号（默认12=系统默认字号，不改变现有外观）
+        public static string GlobalFontColor = "Black";            // 全局字色
+        public static string BtnFontFamily = DefaultFontFamily;    // 按钮字体
+        public static int BtnFontSize = 14;                        // 按钮字号
+        public static string TreeFontFamily = DefaultFontFamily;   // 应用树字体
+        public static int TreeFontSize = 16;                       // 应用树字号
+        public static string TreeFontColor = "Black";              // 应用树字色
+        public static string LogFontColor = "White";               // 运行/响应日志字色
+        public static string LogBgColor = "Black";                 // 运行/响应日志背景色
+        // 日志字号为启动初始值：运行日志每个Tab独立，响应日志为单实例；
+        // Ctrl+滚轮在其基础上临时调整（不持久化，重启恢复该初始值）
+        public static int LogFontSize = 14;                        // 运行/响应日志字号
+        public static string LogFontFamily = "Consolas";           // 运行/响应日志字体
     }
 }

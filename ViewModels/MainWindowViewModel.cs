@@ -65,6 +65,12 @@ namespace AppManager2.ViewModels {
         public string WarnUrl { get; set; }
         public bool IsWarnEnabled { get; set; }
 
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public int SettingTabControlSelectedIndex { get; set; }
+        
+        public void RaiseResetSettingCommand() {
+            RelayCommand.Raise(new RelayCommand[] { ResetSoftwareSettingsCommand });
+        }
         // 关闭时设置（对应老项目ClosedTypeGroup：退出/最小化）
         private bool _isClosedExit = true;
         private bool _isClosedMin;
@@ -104,6 +110,7 @@ namespace AppManager2.ViewModels {
 
         // 设置页命令
         public ICommand SaveSettingsCommand { get; set; }
+        public RelayCommand ResetSoftwareSettingsCommand { get; set; }
         public ICommand BrowseJdkCommand { get; set; }
         public ICommand BrowseLogCommand { get; set; }
 
@@ -225,6 +232,17 @@ namespace AppManager2.ViewModels {
             GroupFreshCommand = new RelayCommand(OnGroupFresh);
             FreshBatCommand = new RelayCommand(OnFreshBat);
             SaveSettingsCommand = new RelayCommand(OnSaveSettings);
+            ResetSoftwareSettingsCommand = new RelayCommand(OnResetSoftwareSettings, o => {
+                bool canExecute = true;
+                if((GlobalFontFamily.Equals(Configs.DefaultFontFamily) && GlobalFontSizeText.Equals("12") && GlobalFontColor.Equals("Black")
+                    && BtnFontFamily.Equals(Configs.DefaultFontFamily) && BtnFontSizeText.Equals("14")
+                    && TreeFontFamily.Equals(Configs.DefaultFontFamily) && TreeFontSizeText.Equals("16") && TreeFontColor.Equals("Black")
+                    && LogFontColor.Equals("White") && LogBgColor.Equals("Black") && LogFontSizeText.Equals("14") && LogFontFamily.Equals("Consolas"))
+                    || SettingTabControlSelectedIndex == 0) {
+                    canExecute = false;
+                }
+                return canExecute; 
+            });
             BrowseJdkCommand = new RelayCommand(OnBrowseJdk);
             BrowseLogCommand = new RelayCommand(OnBrowseLog);
         }
@@ -335,6 +353,46 @@ namespace AppManager2.ViewModels {
             RelayCommand.Raise(StartAppCommand, StopAppCommand, EditAppCommand, DeleteAppCommand);
         }
 
+        // —— 软件设置：界面字体/颜色（ThemeUtils启动时加载到Configs并应用，保存后即时生效）——
+        /// <summary>字体类型下拉选项</summary>
+        public static readonly string[] FontOptions = {
+            Configs.DefaultFontFamily, "宋体", "黑体", "楷体", "仿宋", "隶书",
+            "Consolas", "Courier New", "Arial", "Segoe UI", "Times New Roman"
+        };
+        /// <summary>字号下拉选项</summary>
+        public static readonly string[] FontSizeOptions = {
+            "10", "11", "12", "13", "14", "15", "16", "17", "18", "20", "22", "24", "28"
+        };
+        /// <summary>颜色下拉选项（色块+颜色名展示）</summary>
+        public static readonly IReadOnlyList<ColorOption> ColorOptions = new[] {
+            "Black", "White", "Gray", "LightGray", "DarkGray", "Red", "Green", "Blue", "Yellow",
+            "Orange", "Purple", "Cyan", "Brown", "Pink", "Gold"
+        }.Select(n => new ColorOption(n)).ToArray();
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string GlobalFontFamily { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string GlobalFontSizeText { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string GlobalFontColor { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string BtnFontFamily { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string BtnFontSizeText { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string TreeFontFamily { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string TreeFontSizeText { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string TreeFontColor { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string LogFontColor { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string LogBgColor { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string LogFontSizeText { get; set; }
+        [OnChangedMethod(nameof(RaiseResetSettingCommand))]
+        public string LogFontFamily { get; set; }
+
         #region 设置页（对应老项目FormSetEvent）
 
         /// <summary>
@@ -378,6 +436,9 @@ namespace AppManager2.ViewModels {
             Configs.PriDelCount = int.TryParse(iniData[Configs.IniSectionSet][Configs.IniKeySetDelCount], out var delCount) ? delCount : 0;
             Configs.DelCount = Configs.PriDelCount;
 
+            // 界面字体/颜色等软件设置：ThemeUtils.Init启动时已加载到Configs并应用，同步到设置页显示
+            SyncSoftwareSettingsToView();
+
             var closedType = iniData[Configs.IniSectionSet][Configs.IniKeySetClosedType];
             if (string.IsNullOrEmpty(closedType)) {
                 closedType = Configs.ClosedTypeExit;
@@ -414,7 +475,29 @@ namespace AppManager2.ViewModels {
             IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTimeout, ref Configs.TimeoutText, MonitorTimeoutText ?? string.Empty);
             IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetInterval, ref Configs.IntervalText, MonitorIntervalText ?? string.Empty);
             IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogWrap, ref Configs.LogWrap, SelectedLogWrap ?? Configs.LogWrapNone);
+
+            // 界面字体/颜色（字号解析失败保持当前值；保存后ApplyResources即时生效）
+            var globalFontSize = int.TryParse(GlobalFontSizeText, out var gfs) ? gfs : Configs.GlobalFontSize;
+            var btnFontSize = int.TryParse(BtnFontSizeText, out var bfs) ? bfs : Configs.BtnFontSize;
+            var treeFontSize = int.TryParse(TreeFontSizeText, out var tfs) ? tfs : Configs.TreeFontSize;
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontFamily, ref Configs.GlobalFontFamily, GlobalFontFamily ?? Configs.GlobalFontFamily);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontSize, ref Configs.GlobalFontSize, globalFontSize);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontColor, ref Configs.GlobalFontColor, GlobalFontColor ?? Configs.GlobalFontColor);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontFamily, ref Configs.BtnFontFamily, BtnFontFamily ?? Configs.BtnFontFamily);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontSize, ref Configs.BtnFontSize, btnFontSize);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontFamily, ref Configs.TreeFontFamily, TreeFontFamily ?? Configs.TreeFontFamily);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontSize, ref Configs.TreeFontSize, treeFontSize);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontColor, ref Configs.TreeFontColor, TreeFontColor ?? Configs.TreeFontColor);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontColor, ref Configs.LogFontColor, LogFontColor ?? Configs.LogFontColor);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogBgColor, ref Configs.LogBgColor, LogBgColor ?? Configs.LogBgColor);
+            // 日志字号（启动初始值，限8~40）；字体随保存即时生效，已开Tab的字号按新建Tab起生效
+            var logFontSize = int.TryParse(LogFontSizeText, out var lfsVal) ? Math.Max(8, Math.Min(40, lfsVal)) : Configs.LogFontSize;
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontSize, ref Configs.LogFontSize, logFontSize);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontFamily, ref Configs.LogFontFamily, LogFontFamily ?? Configs.LogFontFamily);
             IniParserUtils.SaveIniData(systemIni, iniData);
+
+            // 界面字体/颜色立即生效
+            ThemeUtils.ApplyResources();
 
             // 静态值同步（Configs.*已由上面的比对更新），JdkPath/Profiles/LogPath重新从ini加载
             JavaAppUtils.LoadSettings();
@@ -436,6 +519,61 @@ namespace AppManager2.ViewModels {
 
         private void OnSaveSettings(object obj) {
             SaveSettings();
+        }
+
+        /// <summary>
+        /// Configs中的软件设置值同步到设置页各绑定属性显示
+        /// </summary>
+        private void SyncSoftwareSettingsToView() {
+            GlobalFontFamily = Configs.GlobalFontFamily;
+            GlobalFontSizeText = Configs.GlobalFontSize.ToString();
+            GlobalFontColor = Configs.GlobalFontColor;
+            BtnFontFamily = Configs.BtnFontFamily;
+            BtnFontSizeText = Configs.BtnFontSize.ToString();
+            TreeFontFamily = Configs.TreeFontFamily;
+            TreeFontSizeText = Configs.TreeFontSize.ToString();
+            TreeFontColor = Configs.TreeFontColor;
+            LogFontColor = Configs.LogFontColor;
+            LogBgColor = Configs.LogBgColor;
+            LogFontSizeText = Configs.LogFontSize.ToString();
+            LogFontFamily = Configs.LogFontFamily;
+            IsClosedExit = Configs.ClosedTypeExit.Equals(Configs.ClosedType);
+            IsClosedMin = Configs.ClosedTypeMin.Equals(Configs.ClosedType);
+        }
+
+        /// <summary>
+        /// 恢复软件设置为默认配置（对应软件设置页“恢复默认”按钮）：
+        /// 确认后把关闭方式/界面字体/按钮字体/应用树/日志的各项设置重置为默认值，
+        /// 与Configs当前值比对后只把变化的键写入ini，并即时生效
+        /// </summary>
+        private void OnResetSoftwareSettings(object obj) {
+            if (MessageBoxResult.OK != MessageBox.Show("确认恢复软件设置为默认配置？\r\n当前的自定义字体、颜色、关闭方式等设置将被重置。",
+                "警告", MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
+                return;
+            }
+
+            var systemIni = Configs.AppPath + "\\" + Configs.SystemIniPath;
+            // 默认值与Configs各字段初始值保持一致；ConfigIniData比对当前值，变化才写键并更新Configs
+            var iniData = new IniData();
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetClosedType, ref Configs.ClosedType, Configs.ClosedTypeExit);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontFamily, ref Configs.GlobalFontFamily, Configs.DefaultFontFamily);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontSize, ref Configs.GlobalFontSize, 12);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontColor, ref Configs.GlobalFontColor, "Black");
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontFamily, ref Configs.BtnFontFamily, Configs.DefaultFontFamily);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontSize, ref Configs.BtnFontSize, 14);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontFamily, ref Configs.TreeFontFamily, Configs.DefaultFontFamily);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontSize, ref Configs.TreeFontSize, 16);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontColor, ref Configs.TreeFontColor, "Black");
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontColor, ref Configs.LogFontColor, "White");
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogBgColor, ref Configs.LogBgColor, "Black");
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontSize, ref Configs.LogFontSize, 14);
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontFamily, ref Configs.LogFontFamily, "Consolas");
+            IniParserUtils.SaveIniData(systemIni, iniData);
+
+            // 设置页显示同步 + 界面即时生效
+            SyncSoftwareSettingsToView();
+            ThemeUtils.ApplyResources();
+            ShowMessage("已恢复默认设置", Brushes.Green);
         }
 
         /// <summary>
@@ -1626,5 +1764,17 @@ namespace AppManager2.ViewModels {
         private bool CanEditOrDeleteApp(object obj) => GetNode(obj) != null;
         private bool CanStartApp(object obj) => GetNode(obj) is TreeItemModel n && n.CanStart;
         private bool CanStopApp(object obj) => GetNode(obj) is TreeItemModel n && n.CanStop;
+    }
+
+    /// <summary>
+    /// 颜色下拉选项：颜色名（存ini）+色块画刷（选项模板展示）
+    /// </summary>
+    public class ColorOption {
+        public string Name { get; }
+        public Brush Brush { get; }
+        public ColorOption(string name) {
+            Name = name;
+            Brush = AMUtils.ThemeUtils.BrushOf(name) ?? Brushes.Black;
+        }
     }
 }

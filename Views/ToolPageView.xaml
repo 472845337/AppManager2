@@ -169,10 +169,12 @@
                     <Button DockPanel.Dock="Right" Margin="0 2 0 2" Style="{StaticResource Btn_Danger}" Content="清空"
                             Command="{Binding ClearResponseCommand}"/>
                 </DockPanel>
-                <!-- 响应区：Ctrl+滚轮调整字体大小（8~40，超限静默不变，不持久化） -->
+                <!-- 响应区：Ctrl+滚轮调整字体大小（8~40，超限静默不变，设本地值后不再随资源更新，重启恢复）；
+                     字体/字号初始值与字色/背景色引用软件设置的日志配置（LogFontSize/LogFontFamily/LogFontColor/LogBgColor） -->
                 <TextBox Text="{Binding HttpResponse, Mode=OneWay}" IsReadOnly="True"
                          VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                         FontFamily="Consolas" FontSize="14" Background="Black" Foreground="White"
+                         FontFamily="{DynamicResource LogFontFamily}" FontSize="{DynamicResource LogFontSize}"
+                         Background="{DynamicResource LogBgColor}" Foreground="{DynamicResource LogFontColor}"
                          PreviewMouseWheel="ResponseTextBox_PreviewMouseWheel"/>
             </DockPanel>
         </Grid>

@@ -1,4 +1,5 @@
-﻿using AppManager2.ViewModels;
+﻿using AppManager2.AMUtils;
+using AppManager2.ViewModels;
 using System.Windows;
 
 namespace AppManager2.Views {
@@ -10,6 +11,7 @@ namespace AppManager2.Views {
 
         public AppExportWindow() {
             InitializeComponent();
+            ThemeUtils.ApplyToWindow(this); // 全局字体/字色（独立窗口不随主窗口资源更新，构造时按Configs设置）
             ViewModel.SetWindow(this);
         }
     }

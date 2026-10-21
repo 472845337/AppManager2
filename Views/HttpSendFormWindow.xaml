@@ -15,10 +15,13 @@
 
     <!-- 对应老项目HttpSendForm：左侧记录列表 + 右侧详情，分隔宽度记忆到System.ini [send] -->
     <Grid>
+        <!-- 两内容列必须同为星号(*)比例宽：只要左列是固定像素，GridSplitter内部就走Resize1分支，
+             拖动只改写左列宽且忽略右列MinWidth，右拖到右列压至200后仍会把TextBox挤出窗口；
+             两列都为*时走Split分支，两侧MinWidth同时生效，总宽恒等于客户区，任何窗口宽度都不会溢出 -->
         <Grid.ColumnDefinitions>
-            <ColumnDefinition x:Name="ListColumn" Width="300" MinWidth="150"/>
-            <ColumnDefinition Width="5"/>
-            <ColumnDefinition Width="*" MinWidth="200"/>
+            <ColumnDefinition x:Name="ListColumn" Width="3*" MinWidth="150"/>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="5*" MinWidth="200"/>
         </Grid.ColumnDefinitions>
 
         <Border Grid.Column="0" BorderBrush="#ccc" BorderThickness="1" Margin="5">

@@ -2,6 +2,7 @@ using AppManager2.Config;
 using SqliteUtils;
 using System;
 using System.Windows;
+using AppManager2.AMUtils;
 
 namespace AppManager2 {
     public partial class App : Application {
@@ -13,6 +14,9 @@ namespace AppManager2 {
         }
 
         protected override void OnStartup(StartupEventArgs e) {
+            // 界面字体/颜色主题加载并应用（必须在主窗口创建前，首帧即生效）
+            AMUtils.ThemeUtils.Init();
+
             base.OnStartup(e);
 
             try {

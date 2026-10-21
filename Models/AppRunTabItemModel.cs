@@ -29,8 +29,8 @@ namespace AppManager2.Models {
 
         // 运行日志字号（Ctrl+滚轮调整）：必须存模型而非控件本地值——TabControl切换Tab时
         // 复用同一棵元素树只换DataContext，控件本地值会串到其他项目；每Tab模型独立即互不影响。
-        // 不持久化，重启恢复默认14
-        public double LogFontSize { get; set; } = 14;
+        // 初始值取软件设置的日志字号（[set] log_font_size），缩放不持久化，重启恢复该初始值
+        public double LogFontSize { get; set; } = Configs.LogFontSize;
 
         public AppRunTabItemModel() {
             LogContent = string.Empty;

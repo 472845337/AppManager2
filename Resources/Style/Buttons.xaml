@@ -1,9 +1,9 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <!-- 按钮样式 -->
+    <!-- 按钮样式（字体引用应用资源BtnFontFamily/BtnFontSize，软件设置中可调，保存后即时生效） -->
     <Style x:Key="Btn" TargetType="Button">
-        <Setter Property="FontFamily" Value="微软雅黑"/>
-        <Setter Property="FontSize" Value="14"/>
+        <Setter Property="FontFamily" Value="{DynamicResource BtnFontFamily}"/>
+        <Setter Property="FontSize" Value="{DynamicResource BtnFontSize}"/>
         <Setter Property="Margin" Value="2 3 0 0"/>
         <Setter Property="Padding" Value="8 2 8 2"/>
         <Setter Property="Template">
