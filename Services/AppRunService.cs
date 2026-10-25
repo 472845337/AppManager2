@@ -4,7 +4,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using Utils;
 
 namespace AppManager2.Services {
@@ -44,7 +46,7 @@ namespace AppManager2.Services {
 
             if (File.Exists(cliPath)) {
                 // 启动的进程跟踪stdin，允许交互输入
-                ExecuteApp(cliPath, app.Env, app.Section, true);
+                ExecuteApp(cliPath, app.Env, app.Ext, app.Section, true);
             } else {
                 OnLog(app.Section, $"文件不存在：{cliPath}");
             }
@@ -65,7 +67,7 @@ namespace AppManager2.Services {
             if (!string.IsNullOrEmpty(stopPath)) {
                 if (File.Exists(stopPath)) {
                     // 停止脚本不跟踪，避免覆盖启动进程的跟踪
-                    ExecuteApp(stopPath, app.Env, app.Section, false);
+                    ExecuteApp(stopPath, app.Env, app.Ext, app.Section, false);
                 } else {
                     OnLog(app.Section, $"文件不存在：{stopPath}");
                 }
@@ -155,10 +157,18 @@ namespace AppManager2.Services {
         /// <summary>
         /// 使用Process执行程序（对应老项目CliWrapUtils.ExecuteApp），支持键盘输入
         /// </summary>
-        private void ExecuteApp(string filePath, string arguments, string section, bool trackProcess) {
+        private void ExecuteApp(string filePath, string arguments, string ext, string section, bool trackProcess) {
             try {
+                string fileName = filePath;
+                string argumentsFull = arguments;
+                if (filePath.EndsWith(".bat", StringComparison.OrdinalIgnoreCase)) {
+                    // 如果是 .bat，不直接启动 bat，而是启动 cmd.exe
+                    fileName = "cmd.exe";
+                    // 关键：先 chcp 65001 切换代码页，再执行 bat
+                    argumentsFull = $"/c chcp 65001 > nul && \"{filePath}\" {arguments}";
+                }
                 var processStartInfo = new ProcessStartInfo {
-                    FileName = filePath,
+                    FileName = fileName,
                     WorkingDirectory = Path.GetDirectoryName(filePath),
                     UseShellExecute = false,
                     RedirectStandardOutput = true,
@@ -168,10 +178,24 @@ namespace AppManager2.Services {
                     StandardOutputEncoding = Encoding.UTF8,
                     StandardErrorEncoding = Encoding.UTF8
                 };
-                if (!string.IsNullOrEmpty(arguments)) {
-                    processStartInfo.Arguments = arguments;
+                if (!string.IsNullOrEmpty(argumentsFull)) {
+                    processStartInfo.Arguments = argumentsFull;
                 }
-
+                if (!string.IsNullOrEmpty(ext)) {
+                    string[] extArray = Regex.Split(ext, @"\s+")
+                      .Where(x => x.Length > 0)
+                      .ToArray();
+                    foreach (string extSingle in extArray) {
+                        if (extSingle.Contains("=")) {
+                            string[] keyValueArray = extSingle.Split('=');
+                            if (keyValueArray.Length > 1) {
+                                string key = keyValueArray[0];
+                                string value = keyValueArray[1];
+                                processStartInfo.EnvironmentVariables[key] = value;
+                            }
+                        }
+                    }
+                }
                 var process = new Process { StartInfo = processStartInfo, EnableRaisingEvents = true };
 
                 if (trackProcess) {
