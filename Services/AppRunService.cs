@@ -61,8 +61,11 @@ namespace AppManager2.Services {
             StopTrackedProcess(app.Section, app.Title);
 
             if (Configs.AppTypeJava.Equals(app.Type)) {
-                // java停止不走stop.bat：现场按脚本同样逻辑拼命令交cmd.exe直接执行（不生成bat文件）
-                ExecuteApp("cmd.exe", "/c " + AMUtils.JavaAppUtils.BuildStopCommand(app), string.Empty, app.Section, false);
+                // java停止不走stop.bat：现场按脚本同样逻辑拼命令交cmd.exe直接执行（不生成bat文件）；
+                // /v:on开延迟展开配合命令里!_killed!守卫只杀第一个PID（netstat对同一进程有IPv4/IPv6两行）；
+                // chcp 65001切UTF-8与ExecuteApp的管道读取编码一致，taskkill中文输出不乱码
+                ExecuteApp("cmd.exe", "/v:on /c chcp 65001 >nul& " + AMUtils.JavaAppUtils.BuildStopCommand(app),
+                    string.Empty, app.Section, false);
                 return;
             }
 
