@@ -475,6 +475,11 @@ namespace AppManager2.ViewModels {
             // 界面字体/颜色立即生效
             ThemeUtils.ApplyResources();
 
+            // 日志字体可能变化，各运行Tab的不换行宽度按新字体全量重算
+            foreach (var tab in RunningApps) {
+                tab.RefreshWrapWidth();
+            }
+
             // 静态值同步（Configs.*已由上面的比对更新），JdkPath/Profiles/LogPath重新从ini加载
             JavaAppUtils.LoadSettings();
             _monitorService.HeartBeatMsg = string.IsNullOrEmpty(heartBeat) ? Configs.HeartBeatMsg : heartBeat;

@@ -758,21 +758,15 @@ namespace AppManager2 {
         }
 
         /// <summary>
-        /// 当前运行日志RichTextBox（TabControl复用同一实例，记录供右键菜单等无法沿视觉树回溯的场景使用）
-        /// </summary>
-        private RichTextBox _runLogRichTextBox;
-
-        /// <summary>
         /// 切换运行Tab时换挂对应项目的日志文档：
         /// TabControl复用同一棵元素树只换DataContext，RichTextBox的Document须随DataContext手动切换
+        /// （换行模式由模型在自己文档上维护，这里只负责挂接和滚动）
         /// </summary>
         private void RunLogRichTextBox_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e) {
             if (sender is RichTextBox richTextBox) {
-                _runLogRichTextBox = richTextBox;
-                //richTextBox.Document = e.NewValue is AppRunTabItemModel tabItem
-                //    ? tabItem.LogDocument
-                //    : new FlowDocument();
-                ApplyLogWrap(richTextBox);
+                richTextBox.Document = e.NewValue is AppRunTabItemModel tabItem
+                    ? tabItem.LogDocument
+                    : new FlowDocument();
                 richTextBox.ScrollToEnd();
             }
         }
@@ -787,28 +781,15 @@ namespace AppManager2 {
         }
 
         /// <summary>
-        /// 应用日志换行模式：RichTextBox没有TextWrapping属性（TextBox独有），
-        /// 不换行用Document.PageWidth设大值让长行横向铺开（滚动条横向滚动），
-        /// 换行恢复PageWidth默认（跟随视口宽度自动折行）
-        /// </summary>
-        private static void ApplyLogWrap(RichTextBox richTextBox) {
-            if (!(richTextBox.DataContext is AppRunTabItemModel tabItem)) return;
-            richTextBox.Document.PageWidth = tabItem.LogWrapping == TextWrapping.NoWrap ? 16384 : double.NaN;
-        }
-
-        /// <summary>
         /// 运行日志右键-切换日志换行（系统/自动/不换行）：
         /// 子菜单项位于子菜单Popup中，其视觉树到PopupRoot即断链（GetParent为null），
-        /// FindAncestor找不到ContextMenu，改用菜单项继承的DataContext（即日志TextBox的DataContext=运行Tab模型）
+        /// FindAncestor找不到ContextMenu，改用菜单项继承的DataContext（即日志TextBox的DataContext=运行Tab模型）；
+        /// 换行应用由模型OnChanged更新自身LogDocument完成，这里只更新配置
         /// </summary>
         private void RunLogWrapMenu_Click(object sender, RoutedEventArgs e) {
             if (!(sender is FrameworkElement item) || !(item.Tag is string wrapMode)) return;
             if (item.DataContext is AppRunTabItemModel tabItem) {
                 ViewModel?.SetRunTabLogWrap(tabItem, wrapMode);
-                // 子菜单项视觉树到PopupRoot断链拿不到RichTextBox，用记录的当前日志控件应用换行
-                if (_runLogRichTextBox != null) {
-                    ApplyLogWrap(_runLogRichTextBox);
-                }
             }
         }
 
