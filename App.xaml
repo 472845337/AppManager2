@@ -26,6 +26,33 @@
             <sys:Double x:Key="LogFontSize">14</sys:Double>
             <FontFamily x:Key="LogFontFamily">Consolas</FontFamily>
 
+            <!-- 全局字色（AppFontColor）直达输入类控件：
+                 TextBox/ComboBox/CheckBox/RadioButton/ListBox/Label/TabItem的默认主题样式硬编码了Foreground，
+                 属性继承被拦截（全局字色对它们无效，实测验证），此处基于主题样式派生仅覆盖Foreground；
+                 DynamicResource引用，保存设置后ApplyResources替换资源即全局生效。
+                 例外按设计不变：运行日志RichTextBox用LogFontColor、应用树用TreeFontColor、按钮用固定配色 -->
+            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+            <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+            <Style TargetType="CheckBox" BasedOn="{StaticResource {x:Type CheckBox}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+            <Style TargetType="RadioButton" BasedOn="{StaticResource {x:Type RadioButton}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+            <Style TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+            <Style TargetType="Label" BasedOn="{StaticResource {x:Type Label}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+            <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
+            </Style>
+
             <!-- 转换器资源 -->
             <con:BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
             <con:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
@@ -45,6 +72,7 @@
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="HorizontalAlignment" Value="Right" />
                 <Setter Property="Margin" Value="5 5 5 0" />
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
             </Style>
             <!-- 表单值样式 -->
             <Style x:Key="FormValue_Style" TargetType="Control">
@@ -52,6 +80,7 @@
                 <Setter Property="Margin" Value="5 5 5 0" />
                 <Setter Property="Padding" Value="5 0"/>
                 <Setter Property="Height" Value="28"/>
+                <Setter Property="Foreground" Value="{DynamicResource AppFontColor}"/>
             </Style>
         </ResourceDictionary>
     </Application.Resources>

@@ -14,11 +14,9 @@
         FontFamily="{DynamicResource AppFontFamily}"
         FontSize="{DynamicResource AppFontSize}"
         Foreground="{DynamicResource AppFontColor}">
-    <Window.DataContext>
-        <vm:MainWindowViewModel/>
-    </Window.DataContext>
     <Window.Resources>
-        <Style TargetType="TabItem">
+        <!-- 基于App隐式TabItem样式（含全局字色）派生，仅补Padding；否则本样式遮蔽App级样式导致Tab头字色失效 -->
+        <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
             <Setter Property="Padding" Value="5 5"/>
         </Style>
         <!-- 颜色下拉选项模板：色块+颜色名（软件设置的字体/日志颜色选择） -->
@@ -125,11 +123,6 @@
                     <Image Source="pack://application:,,,/AppManager2;component/Resources/icon/AppRightMenu/File.ico" Width="16" Height="16"/>
                 </MenuItem.Icon>
             </MenuItem>
-            <MenuItem Header="刷新" Command="{Binding FreshCommand}" CommandParameter="{Binding}">
-                <MenuItem.Icon>
-                    <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/fresh.ico" Width="16" Height="16"/>
-                </MenuItem.Icon>
-            </MenuItem>
         </ContextMenu>
 
         <!-- 组节点右键菜单（对应 Init2Tree 中组节点的菜单） -->
@@ -160,11 +153,6 @@
             <MenuItem Header="删除" Command="{Binding DeleteCommand}" CommandParameter="{Binding}">
                 <MenuItem.Icon>
                     <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/remove.ico" Width="16" Height="16"/>
-                </MenuItem.Icon>
-            </MenuItem>
-            <MenuItem Header="刷新" Command="{Binding FreshCommand}" CommandParameter="{Binding}">
-                <MenuItem.Icon>
-                    <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/fresh.ico" Width="16" Height="16"/>
                 </MenuItem.Icon>
             </MenuItem>
         </ContextMenu>
@@ -327,11 +315,6 @@
                                         </MenuItem.Icon>
                                     </MenuItem>
                                     <Separator/>
-                                    <MenuItem Header="刷新(_R)" Command="{Binding RefreshAppCommand}">
-                                        <MenuItem.Icon>
-                                            <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/fresh.ico" Width="16" Height="16"/>
-                                        </MenuItem.Icon>
-                                    </MenuItem>
                                     <MenuItem Header="展开所有(_E)" Command="{Binding ExpandAllCommand}">
                                         <MenuItem.Icon>
                                             <Image Source="pack://application:,,,/AppManager2;component/Resources/menu-icon/expand.ico" Width="16" Height="16"/>
@@ -421,19 +404,21 @@
                                                             CommandParameter="{Binding}"/>
                                         </TextBox.InputBindings>
                                     </TextBox>
-                                    <!-- 运行日志（对应老项目RichTextBox，黑底白字+行数裁剪+自动滚动）；
+                                    <!-- 运行日志（对应老项目RichTextBox，黑底白字+ANSI彩色+行数裁剪+自动滚动）：
+                                         RichTextBox按行显示彩色Run，日志文档由Tab模型持有（切Tab换挂Document）；
                                          换行按项目配置：系统(取设置-应用监控)/自动WrapWithOverflow/不换行NoWrap；
                                          Ctrl+滚轮调整字体大小（8~40，超限静默不变，不持久化），
                                          字号绑定Tab模型：TabControl切换Tab复用元素树，存控件本地值会串到其他项目 -->
-                                    <TextBox Text="{Binding LogContent, Mode=OneWay}" IsReadOnly="True"
+                                    <RichTextBox IsReadOnly="True" Padding="0"
                                                  VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                                                TextWrapping="{Binding LogWrapping}"
                                                  FontSize="{Binding LogFontSize}"
                                                  FontFamily="{DynamicResource LogFontFamily}"
                                                  Background="{DynamicResource LogBgColor}" Foreground="{DynamicResource LogFontColor}" BorderThickness="0"
                                                  PreviewMouseWheel="RunLogTextBox_PreviewMouseWheel"
-                                                 behaviors:TextBoxAutoScroll.AutoScroll="True">
-                                        <TextBox.ContextMenu>
+                                                 DataContextChanged="RunLogRichTextBox_DataContextChanged"
+                                                 TextChanged="RunLogRichTextBox_TextChanged"
+                                                 behaviors:RichTextBoxHelper.BoundDocument="{Binding LogDocument}">
+                                        <RichTextBox.ContextMenu>
                                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
                                                 <MenuItem Header="复制" Click="RunLogCopy_Click"/>
                                                 <MenuItem Header="清空" Click="RunLogClear_Click"/>
@@ -448,8 +433,8 @@
                                                               IsChecked="{Binding LogWrap, Converter={StaticResource StringEqualityConverter}, ConverterParameter=none, Mode=OneWay}"/>
                                                 </MenuItem>
                                             </ContextMenu>
-                                        </TextBox.ContextMenu>
-                                    </TextBox>
+                                        </RichTextBox.ContextMenu>
+                                    </RichTextBox>
                                 </DockPanel>
                             </DataTemplate>
                         </TabControl.ContentTemplate>
@@ -483,7 +468,7 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="80"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                         </Grid.ColumnDefinitions>
 
@@ -509,9 +494,9 @@
                                             <RowDefinition Height="Auto"/>
                                         </Grid.RowDefinitions>
                                         <Grid.ColumnDefinitions>
-                                            <ColumnDefinition Width="60"/>
                                             <ColumnDefinition Width="Auto"/>
-                                            <ColumnDefinition Width="60"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="Auto"/>
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
@@ -537,7 +522,7 @@
                                 <Grid Grid.Row="2">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="260"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
 
                                     <!-- 自启动：全选+项目自启动项（与项目编辑中的自启动联动），随窗口四边拉伸 -->
@@ -559,24 +544,24 @@
                                     <StackPanel Grid.Column="1" VerticalAlignment="Top">
                                         <!-- 监听：端口/心跳判定的超时时间与频次 -->
                                         <GroupBox Header="应用监控" Padding="5" Margin="10,5,0,10">
-                                            <WrapPanel>
+                                            <WrapPanel MaxWidth="380" Width="Auto">
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Style="{StaticResource FormLabel_Style}" Text="超时/s"/>
                                                     <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}"
-                        Template="{StaticResource PlaceHolder}" Tag="15" Width="50"/>
+                                                        Template="{StaticResource PlaceHolder}" Tag="15" MinWidth="50" Width="Auto"/>
                                                 </StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Style="{StaticResource FormLabel_Style}" Text="频次/s"/>
                                                     <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}"
-                        Template="{StaticResource PlaceHolder}" Tag="5" Width="50"/>
+                                                        Template="{StaticResource PlaceHolder}" Tag="5" MinWidth="50" Width="Auto"/>
                                                 </StackPanel>
                                                 <StackPanel Orientation="Horizontal">
                                                     <TextBlock Style="{StaticResource FormLabel_Style}" Text="日志换行"/>
                                                     <!-- 系统级换行配置（[set] log_wrap，默认不换行）：项目换行为“系统”时按此生效 -->
-                                                    <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
-                             ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
-                             SelectedValue="{Binding SelectedLogWrap}"
-                             ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
+                                                    <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="110" Width="Auto"
+                                                        ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+                                                        SelectedValue="{Binding SelectedLogWrap}"
+                                                        ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
                                                 </StackPanel>
                                             </WrapPanel>
                                         </GroupBox>
@@ -587,147 +572,171 @@
                         </TabItem>
                         <TabItem Header="软件设置">
                             <ScrollViewer VerticalScrollBarVisibility="Auto">
-                            <WrapPanel Margin="10">
-                                <!-- 界面字体：全局所有控件 + 按钮（保存于System.ini [set]，保存后即时生效） -->
-                                <GroupBox Header="界面字体" Padding="8" Margin="0,0,8,8">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="全局字体:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                <WrapPanel Margin="10">
+                                    <!-- 界面字体：全局所有控件 + 按钮（保存于System.ini [set]，保存后即时生效） -->
+                                    <GroupBox Header="界面字体" Padding="8" Margin="0,0,8,8">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="全局字体:"/>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="150" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
                                                       SelectedItem="{Binding GlobalFontFamily}"
-                                                      ToolTip="软件所有控件的字体类型"/>
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                      ToolTip="软件所有控件的字体类型">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding}" FontFamily="{Binding}"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="60" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
                                                       SelectedItem="{Binding GlobalFontSizeText}"/>
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="100"
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="100" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
                                                       SelectedValuePath="Name" SelectedValue="{Binding GlobalFontColor}"
                                                       ItemTemplate="{StaticResource ColorItemTemplate}"
                                                       ToolTip="软件所有控件的字体颜色"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="按钮字体:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="按钮字体:"/>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="150" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
                                                       SelectedItem="{Binding BtnFontFamily}"
-                                                      ToolTip="软件中所有按钮的字体类型"/>
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                      ToolTip="软件中所有按钮的字体类型">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding}" FontFamily="{Binding}"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="60" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
                                                       SelectedItem="{Binding BtnFontSizeText}"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                    </StackPanel>
-                                </GroupBox>
+                                    </GroupBox>
 
-                                <!-- 应用树：应用管理Tab左侧项目树 -->
-                                <GroupBox Header="应用树" Padding="8" Margin="0,0,8,8">
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       体:"/>
-                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                    <!-- 应用树：应用管理Tab左侧项目树 -->
+                                    <GroupBox Header="应用树" Padding="8" Margin="0,0,8,8">
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       体:"/>
+                                            <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="150" Width="Auto"
                                                   ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
-                                                  SelectedItem="{Binding TreeFontFamily}"/>
+                                                  SelectedItem="{Binding TreeFontFamily}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding}" FontFamily="{Binding}"/>
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
                                             <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
-                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                            <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="60" Width="Auto"
                                                   ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
                                                   SelectedItem="{Binding TreeFontSizeText}"/>
                                             <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
-                                        <ComboBox Style="{StaticResource FormValue_Style}" Width="100"
+                                            <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="100" Width="Auto"
                                                   ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
                                                   SelectedValuePath="Name" SelectedValue="{Binding TreeFontColor}"
                                                   ItemTemplate="{StaticResource ColorItemTemplate}"/>
-                                    </StackPanel>
-                                </GroupBox>
+                                        </StackPanel>
+                                    </GroupBox>
 
-                                <!-- 日志：应用监听运行日志与工具Tab的HTTP响应日志；
+                                    <!-- 日志：应用监听运行日志与工具Tab的HTTP响应日志；
                                      字号为启动初始值，Ctrl+滚轮在其基础上临时调整 -->
-                                <GroupBox Header="日志" Padding="8" Margin="0,0,8,8">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <GroupBox Header="日志" Padding="8" Margin="0,0,8,8">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                                                 <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       体:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="150" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.FontOptions}"
                                                       SelectedItem="{Binding LogFontFamily}"
-                                                      ToolTip="运行日志与HTTP响应日志的字体类型"/>
+                                                      ToolTip="运行日志与HTTP响应日志的字体类型">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate>
+                                                            <TextBlock Text="{Binding}" FontFamily="{Binding}"/>
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
                                                 <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       号:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="60"
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="60" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.FontSizeOptions}"
                                                       SelectedItem="{Binding LogFontSizeText}"
                                                       ToolTip="启动时的初始字号，运行中Ctrl+滚轮临时缩放"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal">
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
                                                 <TextBlock Style="{StaticResource FormLabel_Style}" Text="字       色:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="110"
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="100" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
                                                       SelectedValuePath="Name" SelectedValue="{Binding LogFontColor}"
                                                       ItemTemplate="{StaticResource ColorItemTemplate}"
                                                       ToolTip="应用监听日志与HTTP响应日志的字体颜色"/>
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="背  景  色:"/>
-                                            <ComboBox Style="{StaticResource FormValue_Style}" Width="100"
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="背  景  色:"/>
+                                                <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="100" Width="Auto"
                                                       ItemsSource="{x:Static vm:MainWindowViewModel.ColorOptions}"
                                                       SelectedValuePath="Name" SelectedValue="{Binding LogBgColor}"
                                                       ItemTemplate="{StaticResource ColorItemTemplate}"
                                                       ToolTip="应用监听日志与HTTP响应日志的背景色"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                    </StackPanel>
-                                </GroupBox>
+                                    </GroupBox>
 
-                                <!-- 预览：随上面各下拉当前值即时刷新（保存前即可看到效果） -->
-                                <GroupBox Header="预览" Padding="8" Margin="0,0,8,8">
-                                    <StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                    <!-- 预览：随上面各下拉当前值即时刷新（保存前即可看到效果） -->
+                                    <GroupBox Header="预览" Padding="8" Margin="0,0,8,8">
+                                        <StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                                                 <TextBlock Style="{StaticResource FormLabel_Style}" Text="全       局:" VerticalAlignment="Center"/>
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="应用管理 ABCabc123" VerticalAlignment="Center"
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="应用管理 ABCabc123" VerticalAlignment="Center"
                                                        FontFamily="{Binding GlobalFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
                                                        FontSize="{Binding GlobalFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=12}"
                                                        Foreground="{Binding GlobalFontColor, Converter={StaticResource StringToBrushConverter}}"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
                                                 <TextBlock Style="{StaticResource FormLabel_Style}" Text="按       钮:" VerticalAlignment="Center"/>
-                                            <!-- 本地FontFamily/FontSize覆盖按钮样式的DynamicResource，预览未保存的值 -->
-                                            <Button Content="按钮字体预览" Style="{StaticResource Btn_Pri}"
+                                                <!-- 本地FontFamily/FontSize覆盖按钮样式的DynamicResource，预览未保存的值 -->
+                                                <Button Content="按钮字体预览" Style="{StaticResource Btn_Pri}"
                                                     FontFamily="{Binding BtnFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
                                                     FontSize="{Binding BtnFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=14}"/>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
-                                            <TextBlock Style="{StaticResource FormLabel_Style}" Text="应  用  树:" VerticalAlignment="Center"/>
-                                            <TreeView Margin="2 5" Width="200" BorderThickness="1" BorderBrush="#ddd" Background="White"
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal" Margin="0,0,0,5">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="应  用  树:" VerticalAlignment="Center"/>
+                                                <TreeView Margin="2 5" Width="200" BorderThickness="1" BorderBrush="#ddd" Background="White"
                                                       FontFamily="{Binding TreeFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
                                                       FontSize="{Binding TreeFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=16}"
                                                       Foreground="{Binding TreeFontColor, Converter={StaticResource StringToBrushConverter}}">
-                                                <TreeView.ItemContainerStyle>
-                                                    <!-- 同主界面应用树：覆盖TreeViewItem主题样式的Foreground，否则预览字色不生效 -->
-                                                    <Style TargetType="TreeViewItem">
-                                                        <Setter Property="Foreground" Value="{Binding TreeFontColor, Converter={StaticResource StringToBrushConverter}}"/>
-                                                    </Style>
-                                                </TreeView.ItemContainerStyle>
-                                                <TreeViewItem Header="示例分组" IsExpanded="True">
-                                                    <TreeViewItem Header="示例应用"/>
-                                                </TreeViewItem>
-                                            </TreeView>
-                                        </StackPanel>
-                                        <StackPanel Orientation="Horizontal">
-                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="日       志:" VerticalAlignment="Top"/>
-                                            <TextBox Style="{StaticResource FormValue_Style}" Width="300" IsReadOnly="True"
+                                                    <TreeView.ItemContainerStyle>
+                                                        <!-- 同主界面应用树：覆盖TreeViewItem主题样式的Foreground，否则预览字色不生效 -->
+                                                        <Style TargetType="TreeViewItem">
+                                                            <Setter Property="Foreground" Value="{Binding TreeFontColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                                        </Style>
+                                                    </TreeView.ItemContainerStyle>
+                                                    <TreeViewItem Header="示例分组" IsExpanded="True">
+                                                        <TreeViewItem Header="示例应用"/>
+                                                    </TreeViewItem>
+                                                </TreeView>
+                                            </StackPanel>
+                                            <StackPanel Orientation="Horizontal">
+                                                <TextBlock Style="{StaticResource FormLabel_Style}" Text="日       志:" VerticalAlignment="Center"/>
+                                                <TextBox Style="{StaticResource FormValue_Style}" Padding="5" Height="Auto" Width="300" IsReadOnly="True"
                                                      FontFamily="{Binding LogFontFamily, Converter={StaticResource StringToFontFamilyConverter}}"
                                                      FontSize="{Binding LogFontSizeText, Converter={StaticResource StringToFontSizeConverter}, ConverterParameter=14}"
                                                      Text="INFO : 应用启动成功"
                                                      Foreground="{Binding LogFontColor, Converter={StaticResource StringToBrushConverter}}"
                                                      Background="{Binding LogBgColor, Converter={StaticResource StringToBrushConverter}}"/>
+                                            </StackPanel>
                                         </StackPanel>
-                                    </StackPanel>
-                                </GroupBox>
-                                <!-- 关闭时：退出/最小化 -->
-                                <GroupBox Header="关闭时" Padding="10" Margin="0,0,10,10">
-                                    <StackPanel Orientation="Horizontal">
-                                        <RadioButton Content="退出" GroupName="ClosedType" IsChecked="{Binding IsClosedExit}" Margin="0,0,20,0"/>
-                                        <RadioButton Content="最小化" GroupName="ClosedType" IsChecked="{Binding IsClosedMin}"/>
-                                    </StackPanel>
-                                </GroupBox>
+                                    </GroupBox>
+                                    <!-- 关闭时：退出/最小化 -->
+                                    <GroupBox Header="关闭时" Padding="10" Margin="0,0,10,10">
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Content="退出" GroupName="ClosedType" IsChecked="{Binding IsClosedExit}" Margin="0,0,20,0"/>
+                                            <RadioButton Content="最小化" GroupName="ClosedType" IsChecked="{Binding IsClosedMin}"/>
+                                        </StackPanel>
+                                    </GroupBox>
 
-                                
+
                                 </WrapPanel>
                             </ScrollViewer>
                         </TabItem>
@@ -737,7 +746,7 @@
                         <Button Margin="2 2" Style="{StaticResource Btn_Warn}" Content="恢复默认" Command="{Binding ResetSoftwareSettingsCommand}" Height="36" VerticalAlignment="Bottom" ToolTip="恢复软件设置（关闭方式/字体/颜色）为默认值"/>
                         <Button Margin="2 2" Grid.Row="1" Style="{StaticResource Btn_Pri}" Content="保存" Command="{Binding SaveSettingsCommand}" Height="36" HorizontalAlignment="Right"/>
                     </StackPanel>
-                    </Grid>
+                </Grid>
             </TabItem>
 
             <TabItem Header="工具" Width="80">
@@ -752,7 +761,7 @@
                 <!-- 对应老项目HelpPage：读取doc\help.rtf只读显示（字体随全局设置） -->
                 <RichTextBox x:Name="HelpRichTextBox" IsReadOnly="True"
                              VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
-                             Background="White" BorderThickness="0" Padding="10"/>
+                             BorderThickness="0" Padding="10"/>
             </TabItem>
         </TabControl>
 

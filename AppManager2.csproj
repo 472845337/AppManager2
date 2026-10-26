@@ -109,10 +109,13 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Compile Include="AMUtils\FileUtils.cs" />
+    <Compile Include="AMUtils\FontsUtils.cs" />
     <Compile Include="App.xaml.cs">
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="Behaviors\RichTextBoxHelper.cs" />
     <Compile Include="Converters\HalfConverter.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
@@ -156,10 +159,10 @@
     <Compile Include="Services\AppDbService.cs" />
     <Compile Include="Services\AppRunService.cs" />
     <Compile Include="Services\AppMonitorService.cs" />
-    <Compile Include="AMUtils\FileUtils.cs" />
     <Compile Include="AMUtils\JavaAppUtils.cs" />
     <Compile Include="AMUtils\ExeIconUtils.cs" />
     <Compile Include="AMUtils\ThemeUtils.cs" />
+    <Compile Include="AMUtils\AnsiTextParser.cs" />
     <Compile Include="Converters\FontConverters.cs" />
     <Compile Include="Excep\BusinessException.cs" />
     <Compile Include="Views\ToolPageView.xaml.cs">

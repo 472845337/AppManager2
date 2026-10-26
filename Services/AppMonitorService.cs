@@ -165,9 +165,9 @@ namespace AppManager2.Services {
 
             var runStat = app.RunStat;
             if (HeartBeatMsg.Equals(result)) {
-                // 项目运行中
+                // 项目运行中（\x1b[32m绿色\x1b[0m复位，RichTextBox端由AnsiTextParser解析着色）
                 if (app.RunStat != Configs.AppRunStatSuccess && app.RunStat != Configs.AppRunStatStopping) {
-                    LogReceived?.Invoke(app.Section, "app is running!");
+                    LogReceived?.Invoke(app.Section, "\x1b[32mapp is running!\x1b[0m");
                 }
                 if (app.RunStat != Configs.AppRunStatStopping) {
                     runStat = Configs.AppRunStatSuccess;
@@ -188,9 +188,9 @@ namespace AppManager2.Services {
                     switch (app.RunStat) {
                         case Configs.AppRunStatStopping:
                         case Configs.AppRunStatUnrun:
-                            // 停止中/未运行状态，确认项目已停止
+                            // 停止中/未运行状态，确认项目已停止（\x1b[90m灰色）
                             runStat = Configs.AppRunStatUnrun;
-                            LogReceived?.Invoke(app.Section, "app is unrun!");
+                            LogReceived?.Invoke(app.Section, "\x1b[90mapp is unrun!\x1b[0m");
                             if (Configs.AppRunStatStopping == app.RunStat) {
                                 // 停止中状态，判断到项目已经停止，则将任务运行状态置为否
                                 app.IsRunning = false;
@@ -199,9 +199,9 @@ namespace AppManager2.Services {
                         case Configs.AppRunStatRunning:
                         case Configs.AppRunStatSuccess:
                         case Configs.AppRunStatFail:
-                            // 运行中/运行成功/运行失败，则判定为运行失败
+                            // 运行中/运行成功/运行失败，则判定为运行失败（\x1b[31m红色）
                             runStat = Configs.AppRunStatFail;
-                            LogReceived?.Invoke(app.Section, "app is fail!");
+                            LogReceived?.Invoke(app.Section, "\x1b[31mapp is fail!\x1b[0m");
                             SendWarn(app);
                             break;
                     }

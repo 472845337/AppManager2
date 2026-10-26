@@ -1,4 +1,5 @@
-﻿using AppManager2.AMUtils;
+﻿using AMUtils;
+using AppManager2.AMUtils;
 using AppManager2.Commands;
 using AppManager2.Config;
 using AppManager2.Excep;
@@ -121,7 +122,6 @@ namespace AppManager2.ViewModels {
         public RelayCommand StartAppCommand { get; set; }
         public RelayCommand StopAppCommand { get; set; }
         public ICommand ResetRunStatCommand { get; set; }
-        public ICommand RefreshAppCommand { get; set; }
         public ICommand AllStartCommand { get; set; }
         public ICommand AllStopCommand { get; set; }
         public ICommand ClearAllCommand { get; set; }
@@ -143,9 +143,6 @@ namespace AppManager2.ViewModels {
         public ICommand GroupDeleteCommand { get; set; }
         public ICommand GroupWarnOnCommand { get; set; }
         public ICommand GroupWarnOffCommand { get; set; }
-        public ICommand GroupFreshCommand { get; set; }
-        // 节点刷新 = 重新生成 java 应用对应的 bat 脚本
-        public ICommand FreshBatCommand { get; set; }
 
         // 事件：通知View展开/收缩TreeView
         public event Action ExpandAllRequested;
@@ -182,6 +179,7 @@ namespace AppManager2.ViewModels {
             AutoRunItems = new ObservableCollection<AutoRunItemModel>();
             ProfilesOptions = new ObservableCollection<string> { "dev", "test", "prod" };
             LogWrapOptions = new ObservableCollection<LogWrapOption>(LogWrapModes.SetOptions);
+            FontOptions = FontsUtils.GetSystemFonts();
 
             InitializeCommands();
             WireEvents();
@@ -210,7 +208,6 @@ namespace AppManager2.ViewModels {
             StartAppCommand = new RelayCommand(OnStartApp, CanStartApp);
             StopAppCommand = new RelayCommand(OnStopApp, CanStopApp);
             ResetRunStatCommand = new RelayCommand(OnResetRunStat);
-            RefreshAppCommand = new RelayCommand(OnRefreshApp);
             AllStartCommand = new RelayCommand(OnAllStart);
             AllStopCommand = new RelayCommand(OnAllStop);
             ClearAllCommand = new RelayCommand(OnClearAll);
@@ -229,8 +226,6 @@ namespace AppManager2.ViewModels {
             GroupDeleteCommand = new RelayCommand(OnGroupDelete);
             GroupWarnOnCommand = new RelayCommand(OnGroupWarnOn);
             GroupWarnOffCommand = new RelayCommand(OnGroupWarnOff);
-            GroupFreshCommand = new RelayCommand(OnGroupFresh);
-            FreshBatCommand = new RelayCommand(OnFreshBat);
             SaveSettingsCommand = new RelayCommand(OnSaveSettings);
             ResetSoftwareSettingsCommand = new RelayCommand(OnResetSoftwareSettings, o => {
                 bool canExecute = true;
@@ -293,7 +288,6 @@ namespace AppManager2.ViewModels {
             try {
                 foreach (var section in _appService.GetAllSections().ToList()) {
                     var app = _appService.GetAppBySection(section);
-                    CheckSection(app, false);
                     _monitorService.MonitorApp(app, true);
                 }
             } catch (BusinessException ex) {
@@ -302,21 +296,6 @@ namespace AppManager2.ViewModels {
             _monitorService.Start();
         }
 
-        /// <summary>
-        /// 校验项目配置参数：java项目不存在启动/停止bat时生成（对应老项目CheckSection）
-        /// </summary>
-        private void CheckSection(AppRecord app, bool forceUpdate) {
-            if (null == app) return;
-            if (Configs.AppTypeJava.Equals(app.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStart)))) {
-                var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
-                if (!bool.TrueString.Equals(result)) {
-                    throw new BusinessException(result);
-                }
-            }
-            if (Configs.AppTypeJava.Equals(app.Type) && (forceUpdate || !File.Exists(AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStop)))) {
-                JavaAppUtils.CreateStopBat(app);
-            }
-        }
 
         private void LoadSplitRatio() {
             try {
@@ -355,10 +334,7 @@ namespace AppManager2.ViewModels {
 
         // —— 软件设置：界面字体/颜色（ThemeUtils启动时加载到Configs并应用，保存后即时生效）——
         /// <summary>字体类型下拉选项</summary>
-        public static readonly string[] FontOptions = {
-            Configs.DefaultFontFamily, "宋体", "黑体", "楷体", "仿宋", "隶书",
-            "Consolas", "Courier New", "Arial", "Segoe UI", "Times New Roman"
-        };
+        public static List<string> FontOptions;
         /// <summary>字号下拉选项</summary>
         public static readonly string[] FontSizeOptions = {
             "10", "11", "12", "13", "14", "15", "16", "17", "18", "20", "22", "24", "28"
@@ -889,7 +865,6 @@ namespace AppManager2.ViewModels {
                 DeleteCommand = GroupDeleteCommand,
                 WarnOnCommand = GroupWarnOnCommand,
                 WarnOffCommand = GroupWarnOffCommand,
-                FreshCommand = GroupFreshCommand
             };
         }
 
@@ -927,7 +902,6 @@ namespace AppManager2.ViewModels {
                 EditCommand = EditAppCommand,
                 DeleteCommand = DeleteAppCommand,
                 LocateFileCommand = LocateFileCommand,
-                FreshCommand = FreshBatCommand
             };
         }
 
@@ -1025,7 +999,6 @@ namespace AppManager2.ViewModels {
             if (result == MessageBoxResult.OK) {
                 try {
                     _appService.DeleteFromDb(node.Section);
-                    JavaAppUtils.RemoveBat(node.Name);
                     CloseTabBySection(node.Section);
                     ShowMessage($"{node.Name}删除成功！", Brushes.DarkOrange);
                 } catch (System.Exception ex) {
@@ -1113,7 +1086,6 @@ namespace AppManager2.ViewModels {
             if (!bool.TrueString.Equals(result))
                 return result;
 
-            JavaAppUtils.CreateStopBat(app);
             return null;
         }
 
@@ -1532,7 +1504,6 @@ namespace AppManager2.ViewModels {
                 foreach (var section in willDeleteSections) {
                     var node = group.Children.FirstOrDefault(c => c.Section == section);
                     _appService.DeleteFromDb(section);
-                    JavaAppUtils.RemoveBat(node?.Name ?? section);
                     CloseTabBySection(section);
                 }
                 ShowMessage($"{group.Name}删除成功！", Brushes.DarkOrange);
@@ -1552,63 +1523,6 @@ namespace AppManager2.ViewModels {
                 SetNodeWarn(child, isWarn);
             }
             ShowMessage($"{(isWarn ? "开启" : "关闭")}组{group.Name}警告", Brushes.Orange);
-        }
-
-        private void OnGroupFresh(object obj) {
-            // 组刷新：对组内全部java应用重新生成bat
-            if (!(obj is TreeItemModel group))
-                return;
-
-            var errors = new StringBuilder();
-            foreach (var child in group.Children.ToList()) {
-                var error = ReCreateBat(child);
-                if (error != null) {
-                    errors.AppendLine(error);
-                }
-            }
-
-            if (errors.Length > 0)
-                MessageBox.Show(errors.ToString(), "刷新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-            else
-                ShowMessage("刷新成功", Brushes.Green);
-        }
-
-        #endregion
-
-        #region 刷新/清空/导入导出
-
-        /// <summary>
-        /// 刷新所有启动脚本（对应老项目Fresh_Button_Click）
-        /// </summary>
-        private void OnRefreshApp(object obj) {
-            if (MessageBox.Show("确认刷新所有启动脚本吗？", "信息", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
-                return;
-
-            var sectionDic = _appService.GetAllSectionDic();
-            if (null == sectionDic || 0 == sectionDic.Count) {
-                ShowMessage("当前无项目！", Brushes.Red);
-                return;
-            }
-
-            try {
-                var errors = new StringBuilder();
-                foreach (var entry in sectionDic) {
-                    var app = entry.Value;
-                    if (app == null) continue;
-                    try {
-                        CheckSection(app, true);
-                    } catch (BusinessException ex) {
-                        errors.AppendLine(ex.Message);
-                    }
-                }
-                if (errors.Length > 0) {
-                    MessageBox.Show(errors.ToString(), "刷新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-                } else {
-                    ShowMessage("刷新成功", Brushes.Green);
-                }
-            } catch (System.Exception ex) {
-                MessageBox.Show("系统异常:" + ex.Message, "错误", MessageBoxButton.OK, MessageBoxImage.Error);
-            }
         }
 
         /// <summary>
@@ -1737,7 +1651,6 @@ namespace AppManager2.ViewModels {
                     MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                JavaAppUtils.CreateStopBat(app);
             }
         }
 

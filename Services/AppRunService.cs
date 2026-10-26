@@ -30,20 +30,21 @@ namespace AppManager2.Services {
         private AppRunService() { }
 
         /// <summary>
-        /// 运行项目：bat/exe直接执行App路径，java执行生成的start.bat
+        /// 运行项目：java现场拼启动命令（内容与start.bat一致，仅少title行）交cmd.exe直接执行，
+        /// bat/exe直接执行App路径
         /// </summary>
         public void StartApp(AppRecord app) {
-            string cliPath;
-            switch (app.Type) {
-                case Configs.AppTypeJava:
-                    cliPath = AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStart);
-                    break;
-                default:
-                    // bat/exe及其它类型直接执行配置的路径
-                    cliPath = app.App;
-                    break;
+            if (Configs.AppTypeJava.Equals(app.Type)) {
+                var command = AMUtils.JavaAppUtils.BuildStartCommand(app, Configs.LogFileInfo, Configs.LogFileError, out var error);
+                if (command == null) {
+                    OnLog(app.Section, error);
+                    return;
+                }
+                ExecuteApp("cmd.exe", "/c " + command, app.Ext, app.Section, true);
+                return;
             }
 
+            var cliPath = app.App;
             if (File.Exists(cliPath)) {
                 // 启动的进程跟踪stdin，允许交互输入
                 ExecuteApp(cliPath, app.Env, app.Ext, app.Section, true);
@@ -54,35 +55,37 @@ namespace AppManager2.Services {
 
         /// <summary>
         /// 停止应用：先停止跟踪中的进程（stdin exit → 等待1秒 → kill），
-        /// 再执行停止脚本（bat用StopApp，java用生成的stop.bat），exe类型按进程名杀进程
+        /// 再执行停止脚本（bat用StopApp），java现场拼命令经cmd.exe杀端口进程，exe类型按进程名杀进程
         /// </summary>
         public void StopApp(AppRecord app) {
             StopTrackedProcess(app.Section, app.Title);
 
-            string stopPath = app.Type switch {
-                Configs.AppTypeBat => app.StopApp,
-                Configs.AppTypeJava => AMUtils.FileUtils.GetBatFilePath(app.Title, Configs.BatFileTypeStop),
-                _ => string.Empty
-            };
-            if (!string.IsNullOrEmpty(stopPath)) {
-                if (File.Exists(stopPath)) {
+            if (Configs.AppTypeJava.Equals(app.Type)) {
+                // java停止不走stop.bat：现场按脚本同样逻辑拼命令交cmd.exe直接执行（不生成bat文件）
+                ExecuteApp("cmd.exe", "/c " + AMUtils.JavaAppUtils.BuildStopCommand(app), string.Empty, app.Section, false);
+                return;
+            }
+
+            if (Configs.AppTypeBat.Equals(app.Type) && !string.IsNullOrEmpty(app.StopApp)) {
+                if (File.Exists(app.StopApp)) {
                     // 停止脚本不跟踪，避免覆盖启动进程的跟踪
-                    ExecuteApp(stopPath, app.Env, app.Ext, app.Section, false);
+                    ExecuteApp(app.StopApp, app.Env, app.Ext, app.Section, false);
                 } else {
-                    OnLog(app.Section, $"文件不存在：{stopPath}");
+                    OnLog(app.Section, $"文件不存在：{app.StopApp}");
                 }
-            } else {
-                // exe通过进程名结束
-                var existList = ProcessUtils.GetProcessByName(ProcessUtils.GetProcessName(app.App), app.App);
-                if (null != existList && existList.Count > 0) {
-                    foreach (var p in existList) {
-                        try {
-                            OnLog(app.Section, $"开始杀进程{app.Title}");
-                            p.Kill();
-                            OnLog(app.Section, $"杀进程{app.Title}成功");
-                        } catch (Exception ex) {
-                            OnLog(app.Section, $"杀进程{app.Title}失败：{ex.Message}");
-                        }
+                return;
+            }
+
+            // bat未配置停止脚本/exe通过进程名结束
+            var existList = ProcessUtils.GetProcessByName(ProcessUtils.GetProcessName(app.App), app.App);
+            if (null != existList && existList.Count > 0) {
+                foreach (var p in existList) {
+                    try {
+                        OnLog(app.Section, $"开始杀进程{app.Title}");
+                        p.Kill();
+                        OnLog(app.Section, $"杀进程{app.Title}成功");
+                    } catch (Exception ex) {
+                        OnLog(app.Section, $"杀进程{app.Title}失败：{ex.Message}");
                     }
                 }
             }

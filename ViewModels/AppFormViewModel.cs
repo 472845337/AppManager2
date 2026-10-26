@@ -61,8 +61,8 @@ namespace AppManager2.ViewModels {
         public RelayCommand BrowseAppPathCommand { get; set; }
         public RelayCommand BrowseStopPathCommand { get; set; }
         public RelayCommand BrowseJdkPathCommand { get; set; }
-        public RelayCommand DefaultJvmCommand { get; set; }
-        public RelayCommand DefaultEnvCommand { get; set; }
+        public RelayCommand DefaultJavaCommand { get; set; }
+        public RelayCommand DefaultPythonCommand { get; set; }
 
         private readonly AppService _appService;
         private Window _window;
@@ -79,6 +79,14 @@ namespace AppManager2.ViewModels {
             ["--spring.profiles.active"] = "--spring.profiles.active=prod"
         };
 
+        private readonly Dictionary<string, string> _defaultPythonExt = new Dictionary<string, string> {
+            ["PYTHONUTF8"] = "1",
+            ["PYTHONIOENCODING"] = "utf-8",
+            ["LANG"] = "en_US.UTF-8",
+            ["LC_ALL"] = "en_US.UTF-8",
+            ["PYTHONUNBUFFERED"] = "1"
+        };
+
         public AppFormViewModel() {
             _appService = AppService.Instance;
 
@@ -93,8 +101,8 @@ namespace AppManager2.ViewModels {
             BrowseAppPathCommand = new RelayCommand(OnBrowseAppPath);
             BrowseStopPathCommand = new RelayCommand(OnBrowseStopPath);
             BrowseJdkPathCommand = new RelayCommand(OnBrowseJdkPath);
-            DefaultJvmCommand = new RelayCommand(OnDefaultJvm);
-            DefaultEnvCommand = new RelayCommand(OnDefaultEnv);
+            DefaultJavaCommand = new RelayCommand(OnDefaultJava);
+            DefaultPythonCommand = new RelayCommand(OnDefaultPython);
 
             LoadGroups();
         }
@@ -274,7 +282,7 @@ namespace AppManager2.ViewModels {
             // 保存到 SQLite（AppManager.db 的 t_app 表），并更新缓存、通知界面刷新
             _appService.SaveToDb(app);
 
-            // java项目根据jar包地址生成对应的启动/停止bat脚本
+            // java项目根据jar包地址生成对应的启动bat脚本（停止已改为cmd直接执行，不再生成脚本）
             if (Configs.AppTypeJava.Equals(app.Type)) {
                 JavaAppUtils.LoadSettings();
 
@@ -284,7 +292,6 @@ namespace AppManager2.ViewModels {
                     MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
-                JavaAppUtils.CreateStopBat(app);
             }
         }
 
@@ -351,28 +358,38 @@ namespace AppManager2.ViewModels {
             }
         }
 
-        private void OnDefaultJvm(object obj) {
-            var current = JvmParams ?? string.Empty;
+        private void OnDefaultJava(object obj) {
+            var currentJavaParams = JvmParams ?? string.Empty;
             foreach (var param in _defaultJvmParams) {
-                if (!current.Contains(param.Key)) {
-                    current = string.IsNullOrEmpty(current)
+                if (!currentJavaParams.Contains(param.Key)) {
+                    currentJavaParams = string.IsNullOrEmpty(currentJavaParams)
                         ? param.Value
-                        : $"{current} {param.Value}";
+                        : $"{currentJavaParams} {param.Value}";
                 }
             }
-            JvmParams = current;
+            JvmParams = currentJavaParams;
+            var currentJavaEnv = EnvParams ?? string.Empty;
+            foreach (var param in _defaultEnvParams) {
+                if (!currentJavaEnv.Contains(param.Key)) {
+                    currentJavaEnv = string.IsNullOrEmpty(currentJavaEnv)
+                        ? param.Value
+                        : $"{currentJavaEnv} {param.Value}";
+                }
+            }
+            EnvParams = currentJavaEnv;
         }
 
-        private void OnDefaultEnv(object obj) {
-            var current = EnvParams ?? string.Empty;
-            foreach (var param in _defaultEnvParams) {
-                if (!current.Contains(param.Key)) {
-                    current = string.IsNullOrEmpty(current)
-                        ? param.Value
-                        : $"{current} {param.Value}";
+        private void OnDefaultPython(object obj) {
+            var currentPythonExt = ExtScript ?? string.Empty;
+
+            foreach (var ext in _defaultPythonExt) {
+                if (!currentPythonExt.Contains(ext.Key)) {
+                    currentPythonExt = string.IsNullOrEmpty(currentPythonExt)
+                        ? $"{ext.Key}={ext.Value}"
+                        : $"{currentPythonExt} {ext.Key}={ext.Value}";
                 }
             }
-            EnvParams = current;
+            ExtScript = currentPythonExt;
         }
     }
 }

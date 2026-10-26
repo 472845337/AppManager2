@@ -15,7 +15,7 @@ using IniParserUtils = global::Utils.IniParserUtils;
 
 namespace AppManager2 {
     public partial class MainWindow : Window {
-        private MainWindowViewModel ViewModel => DataContext as MainWindowViewModel;
+        private readonly MainWindowViewModel ViewModel = new MainWindowViewModel();
 
         // 托盘图标（对应老项目AppManagerNotifyIcon）
         private System.Windows.Forms.NotifyIcon _notifyIcon;
@@ -30,6 +30,8 @@ namespace AppManager2 {
             LoadMainTabIndex();
             LoadSendFormConfig();
             InitAutoRunPanel();
+            // 模型赋值
+            DataContext = ViewModel;
         }
 
         /// <summary>
@@ -734,11 +736,11 @@ namespace AppManager2 {
         /// </summary>
         private void RunLogCopy_Click(object sender, RoutedEventArgs e) {
             if (sender is FrameworkElement { Parent: ContextMenu menu }
-                && menu.PlacementTarget is TextBox textBox) {
-                if (string.IsNullOrEmpty(textBox.SelectedText)) {
+                && menu.PlacementTarget is RichTextBox richTextBox) {
+                if (string.IsNullOrEmpty(richTextBox.Selection.Text)) {
                     MessageBox.Show("复制内容为空", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
                 } else {
-                    textBox.Copy();
+                    richTextBox.Copy();
                     ViewModel?.ShowMessage("复制成功", Brushes.Green);
                 }
             }
@@ -749,10 +751,49 @@ namespace AppManager2 {
         /// </summary>
         private void RunLogClear_Click(object sender, RoutedEventArgs e) {
             if (sender is FrameworkElement { Parent: ContextMenu menu }
-                && menu.PlacementTarget is TextBox textBox
-                && textBox.DataContext is AppRunTabItemModel tabItem) {
+                && menu.PlacementTarget is RichTextBox richTextBox
+                && richTextBox.DataContext is AppRunTabItemModel tabItem) {
                 tabItem.ClearLog();
             }
+        }
+
+        /// <summary>
+        /// 当前运行日志RichTextBox（TabControl复用同一实例，记录供右键菜单等无法沿视觉树回溯的场景使用）
+        /// </summary>
+        private RichTextBox _runLogRichTextBox;
+
+        /// <summary>
+        /// 切换运行Tab时换挂对应项目的日志文档：
+        /// TabControl复用同一棵元素树只换DataContext，RichTextBox的Document须随DataContext手动切换
+        /// </summary>
+        private void RunLogRichTextBox_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e) {
+            if (sender is RichTextBox richTextBox) {
+                _runLogRichTextBox = richTextBox;
+                //richTextBox.Document = e.NewValue is AppRunTabItemModel tabItem
+                //    ? tabItem.LogDocument
+                //    : new FlowDocument();
+                ApplyLogWrap(richTextBox);
+                richTextBox.ScrollToEnd();
+            }
+        }
+
+        /// <summary>
+        /// 日志变化时自动滚动到底部（对应老项目RichTextBox的ScrollToCaret）
+        /// </summary>
+        private void RunLogRichTextBox_TextChanged(object sender, TextChangedEventArgs e) {
+            if (sender is RichTextBox richTextBox && richTextBox.IsLoaded) {
+                richTextBox.ScrollToEnd();
+            }
+        }
+
+        /// <summary>
+        /// 应用日志换行模式：RichTextBox没有TextWrapping属性（TextBox独有），
+        /// 不换行用Document.PageWidth设大值让长行横向铺开（滚动条横向滚动），
+        /// 换行恢复PageWidth默认（跟随视口宽度自动折行）
+        /// </summary>
+        private static void ApplyLogWrap(RichTextBox richTextBox) {
+            if (!(richTextBox.DataContext is AppRunTabItemModel tabItem)) return;
+            richTextBox.Document.PageWidth = tabItem.LogWrapping == TextWrapping.NoWrap ? 16384 : double.NaN;
         }
 
         /// <summary>
@@ -764,6 +805,10 @@ namespace AppManager2 {
             if (!(sender is FrameworkElement item) || !(item.Tag is string wrapMode)) return;
             if (item.DataContext is AppRunTabItemModel tabItem) {
                 ViewModel?.SetRunTabLogWrap(tabItem, wrapMode);
+                // 子菜单项视觉树到PopupRoot断链拿不到RichTextBox，用记录的当前日志控件应用换行
+                if (_runLogRichTextBox != null) {
+                    ApplyLogWrap(_runLogRichTextBox);
+                }
             }
         }
 
@@ -780,7 +825,7 @@ namespace AppManager2 {
         private void RunLogTextBox_PreviewMouseWheel(object sender, MouseWheelEventArgs e) {
             if (Keyboard.Modifiers != ModifierKeys.Control) return;
             e.Handled = true;
-            if (!(sender is TextBox { DataContext: AppRunTabItemModel tabItem })) return;
+            if (!(sender is RichTextBox { DataContext: AppRunTabItemModel tabItem })) return;
 
             var fontSize = tabItem.LogFontSize + (e.Delta > 0 ? 1 : -1);
             if (fontSize < RunLogFontMinSize || fontSize > RunLogFontMaxSize) return;

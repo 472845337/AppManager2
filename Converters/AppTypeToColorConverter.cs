@@ -1,7 +1,10 @@
 using System;
 using System.Globalization;
+using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
+using AppManager2.AMUtils;
+using AppManager2.Config;
 
 namespace AppManager2.Converters {
     /// <summary>
@@ -12,12 +15,12 @@ namespace AppManager2.Converters {
     /// 颜色规则：
     /// - 红色: 必填项
     /// - 橙色: 可选项但端口/心跳必填其一
-    /// - 黑色: 可选项
+    /// - 其他: 可选项，用系统配置的全局字色（AppFontColor资源）
     /// </summary>
     public class AppTypeToColorConverter : IMultiValueConverter {
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture) {
             if (values == null || values.Length == 0 || values[0] == null)
-                return new SolidColorBrush(Colors.Black);
+                return SystemBrush();
 
             var appType = values[0].ToString();
             var fieldType = parameter?.ToString();
@@ -31,36 +34,43 @@ namespace AppManager2.Converters {
 
         private SolidColorBrush GetColor(string appType, string fieldType) {
             if (string.IsNullOrEmpty(fieldType))
-                return new SolidColorBrush(Colors.Black);
+                return SystemBrush();
 
             // 根据字段类型和应用类型返回颜色
             switch (fieldType) {
                 case "title": // 名称 - 所有类型都必填
                 case "path":  // 路径 - 所有类型都必填
-                    return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // 红色 #DC3545
+                    return new SolidColorBrush(Colors.Red);
 
                 case "stop": // 终止脚本
-                    if (appType == "bat")
-                        return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // 红色
-                    if (appType == "exe")
-                        return new SolidColorBrush(Color.FromRgb(253, 126, 20)); // 橙色 #FD7E14
-                    return new SolidColorBrush(Colors.Black);
+                    if (Configs.AppTypeBat.Equals(appType))
+                        return new SolidColorBrush(Colors.Red); // 红色
+                    return SystemBrush();
 
                 case "port": // 端口
-                    if (appType == "java")
-                        return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // 红色
-                    return new SolidColorBrush(Color.FromRgb(253, 126, 20)); // 橙色
-
-                case "heartbeat": // 心跳
-                    if (appType == "bat")
-                        return new SolidColorBrush(Color.FromRgb(220, 53, 69)); // 红色
-                    return new SolidColorBrush(Color.FromRgb(253, 126, 20)); // 橙色
+                    if (Configs.AppTypeJava.Equals(appType)) {
+                        return new SolidColorBrush(Colors.Red); // 红色
+                    } else if (Configs.AppTypeBat.Equals(appType)) {
+                        return new SolidColorBrush(Colors.Orange); // 橙色
+                    } else {
+                        return SystemBrush();
+                    }
+                case "heartbeat": // 心跳：bat无端口监控必填（红），exe端口/心跳二选一（橙），
+                    if (Configs.AppTypeBat.Equals(appType))
+                        return new SolidColorBrush(Colors.Orange); // 红色
+                    return SystemBrush();
 
                 case "jdk":
                 case "actuator":
                 default:
-                    return new SolidColorBrush(Colors.Black);
+                    return SystemBrush();
             }
+        }
+
+        /// <summary>系统配置的全局字色（设置-软件设置-界面字体-字色），未配置时回落黑色</summary>
+        private static SolidColorBrush SystemBrush() {
+            var brush = Application.Current?.TryFindResource(ThemeUtils.KeyAppFontColor) as SolidColorBrush;
+            return brush ?? Brushes.Black;
         }
     }
 }

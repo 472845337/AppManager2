@@ -12,11 +12,6 @@ namespace AppManager2.Config {
         public const string DbName = "AppManager.db";
         public const string DbPassword = "r4PdXkFrCvPyMCk4KNG3";
 
-        public const string BatPath = "bat\\";
-        public const string BatFileTypeStart = "start";
-        public const string BatFileNameStart = "_start.bat";
-        public const string BatFileTypeStop = "stop";
-        public const string BatFileNameStop = "_stop.bat";
         public const string LogFileInfo = "info.log";
         public const string LogFileError = "error.log";
 

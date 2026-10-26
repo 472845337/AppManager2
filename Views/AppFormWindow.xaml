@@ -43,14 +43,14 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- 类型 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="类 型:"/>
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Foreground="Red" Grid.Row="0" Grid.Column="0" Text="类 型:"/>
                         <ComboBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="1"
                           ItemsSource="{Binding AppTypes}"
                           SelectedItem="{Binding AppType}"
@@ -86,9 +86,9 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="30"/>
+                            <ColumnDefinition Width="Auto"/>
                         </Grid.ColumnDefinitions>
 
                         <!-- 应用路径 -->
@@ -145,7 +145,7 @@
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
 
@@ -192,6 +192,7 @@
                 <GroupBox Grid.Row="3" Header="参数配置">
                     <Grid>
                         <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*" MinHeight="40"/>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*" MinHeight="40"/>
@@ -199,45 +200,40 @@
                             <RowDefinition Height="*" MinHeight="40"/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
                             <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-
+                        <!-- 常用配置 -->
+                        <WrapPanel Grid.Row="0" Grid.Column="0" Grid.ColumnSpan="2">
+                            <Button Style="{StaticResource Btn_Pri}" Content="Java常用" Command="{Binding DefaultJavaCommand}" IsEnabled="{Binding IsEditMode}"/>
+                            <Button Style="{StaticResource Btn_Pri}" Content="Python常用" Command="{Binding DefaultPythonCommand}" IsEnabled="{Binding IsEditMode}"/>
+                        </WrapPanel>
                         <!-- JVM参数 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="0" Grid.Column="0" Text="配 置:" VerticalAlignment="Top"/>
-                        <Button Style="{StaticResource Btn_Pri}" Grid.Row="0" Grid.Column="1" Content="常用"
-                        Command="{Binding DefaultJvmCommand}"
-                        IsEnabled="{Binding IsEditMode}"
-                        VerticalAlignment="Top" FontSize="10"/>
-                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="0" Grid.Column="2"
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="1" Grid.Column="0" Text="配 置:" VerticalAlignment="Top"/>
+                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="1" Grid.Column="1"
                          Text="{Binding JvmParams, UpdateSourceTrigger=PropertyChanged}"
                          IsReadOnly="{Binding IsDetailMode}"
                          Height="Auto" TextWrapping="Wrap" AcceptsReturn="True"
                          Template="{StaticResource PlaceHolder}" Tag="java启动项内存等配置">
                         </TextBox>
 
-                        <GridSplitter Margin="2 2 2 0" Grid.Row="1" Grid.Column="2" Height="5" HorizontalAlignment="Stretch" Background="#ddd"/>
+                        <GridSplitter Margin="2 2 2 0" Grid.Row="2" Grid.Column="2" Height="5" HorizontalAlignment="Stretch" Background="#ddd"/>
                         <!-- 环境参数 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="2" Grid.Column="0" Text="参 数:" VerticalAlignment="Top"/>
-                        <Button Style="{StaticResource Btn_Pri}" Grid.Row="2" Grid.Column="1" Content="常用"
-                        Command="{Binding DefaultEnvCommand}"
-                        IsEnabled="{Binding IsEditMode}"
-                        VerticalAlignment="Top" FontSize="10"/>
-                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="2" Grid.Column="2"
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="3" Grid.Column="0" Text="参 数:" VerticalAlignment="Top"/>
+                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="3" Grid.Column="1"
                          Text="{Binding EnvParams, UpdateSourceTrigger=PropertyChanged}"
                          IsReadOnly="{Binding IsDetailMode}"
                          Height="Auto" TextWrapping="Wrap" AcceptsReturn="True"
                          Template="{StaticResource PlaceHolder}" Tag="java启动参数日志路径环境等"></TextBox>
 
-                        <GridSplitter Margin="2 2 2 0" Grid.Row="3" Grid.Column="2" Height="5" HorizontalAlignment="Stretch" Background="#ddd"/>
+                        <GridSplitter Margin="2 2 2 0" Grid.Row="4" Grid.Column="2" Height="5" HorizontalAlignment="Stretch" Background="#ddd"/>
                         <!-- 扩展脚本 -->
-                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="4" Grid.Column="0" Text="扩 展:" VerticalAlignment="Top"/>
-                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="4" Grid.Column="1" Grid.ColumnSpan="2"
- Text="{Binding ExtScript, UpdateSourceTrigger=PropertyChanged}"
- IsReadOnly="{Binding IsDetailMode}"
- Height="Auto" TextWrapping="Wrap" AcceptsReturn="True"
- Template="{StaticResource PlaceHolder}" Tag="java启动项脚本之前的配置">
+                        <TextBlock Style="{StaticResource FormLabel_Style}" Grid.Row="5" Grid.Column="0" Text="扩 展:" VerticalAlignment="Top"/>
+                        <TextBox Style="{StaticResource FormValue_Style}" Grid.Row="5" Grid.Column="1" Grid.ColumnSpan="2"
+                            Text="{Binding ExtScript, UpdateSourceTrigger=PropertyChanged}"
+                            IsReadOnly="{Binding IsDetailMode}"
+                            Height="Auto" TextWrapping="Wrap" AcceptsReturn="True"
+                            Template="{StaticResource PlaceHolder}" Tag="启动项脚本之前的配置">
                         </TextBox>
 
 
@@ -253,7 +249,7 @@
                             <RowDefinition/>
                         </Grid.RowDefinitions>
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="50"/>
+                            <ColumnDefinition Width="Auto"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <!-- 其他配置选项 -->
@@ -299,7 +295,7 @@
             <!-- 提示信息 -->
             <StackPanel VerticalAlignment="Center" Orientation="Horizontal" Visibility="{Binding IsEditMode, Converter={StaticResource BooleanToVisibilityConverter}}">
                 <TextBlock Text="红色必填" Foreground="Red" FontSize="11"/>
-                <TextBlock Text="  " Foreground="Orange" FontSize="11"/>
+                <TextBlock Text="  " FontSize="11"/>
                 <TextBlock Text="橙色必填其一" Foreground="Orange" FontSize="11"/>
             </StackPanel>
             <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}" Content="关闭" Width="80"
