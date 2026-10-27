@@ -291,18 +291,6 @@ namespace AppManager2.ViewModels {
         private void SaveApp(AppRecord app) {
             // 保存到 SQLite（AppManager.db 的 t_app 表），并更新缓存、通知界面刷新
             _appService.SaveToDb(app);
-
-            // java项目根据jar包地址生成对应的启动bat脚本（停止已改为cmd直接执行，不再生成脚本）
-            if (Configs.AppTypeJava.Equals(app.Type)) {
-                JavaAppUtils.LoadSettings();
-
-                var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
-                if (!bool.TrueString.Equals(result)) {
-                    // 应用信息已保存，脚本生成失败单独提示
-                    MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-            }
         }
 
         private void OnClose(object obj) {

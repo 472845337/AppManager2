@@ -24,56 +24,36 @@ namespace AppManager2.AMUtils {
             Profiles = iniData[Configs.IniSectionSet][Configs.IniKeySetProfiles];
             LogPath = iniData[Configs.IniSectionSet][Configs.IniKeySetLogpath];
         }
-
-        /// <summary>
-        /// 创建启动脚本，成功返回 bool.TrueString，失败返回错误信息
-        /// </summary>
-        public static string CreateStartBat(AppRecord app, string logFileName, string errorLogFileName) {
-            var error = ValidateJdk(app);
-            if (error != null) {
-                return error;
-            }
-
-            var script = new StringBuilder();
-            script.Append("@echo off").Append(Environment.NewLine);
-            script.Append("chcp 65001").Append(Environment.NewLine);
-            script.Append("title ").Append("\"").Append(app.Title).Append("\"").Append(Environment.NewLine);
-            var extLine = BuildExtLine(app);
-            if (extLine != null) {
-                script.Append(extLine).Append(Environment.NewLine);
-            }
-            // 创建日志目录（如果需要输出日志）
-            var mkdirLine = BuildMkdirLine(app, logFileName);
-            if (mkdirLine != null) {
-                var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath + Configs.PathCharacter : LogPath) + app.Title + Configs.PathCharacter;
-                FileUtils.CreateDirectory(projectLogPath);
-                script.Append(mkdirLine).Append(Environment.NewLine);
-            }
-            script.Append(BuildJavaLine(app, logFileName, errorLogFileName)).Append(Environment.NewLine);
-            // 窗口不关闭
-            script.Append("pause");
-            return bool.TrueString;
+        private static string GetFullLogPath(AppRecord app) {
+            return (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : (LogPath + Configs.PathCharacter)) + app.Title + Configs.PathCharacter;
         }
-
         /// <summary>
         /// 现场构建java启动命令（不落bat文件，运行时交cmd.exe直接执行）：
-        /// 内容与CreateStartBat生成的start.bat完全一致，仅去掉title行，多行命令以" & "连接为单行
+        /// 内容与CreateStartBat生成的start.bat一致，仅去掉title行，多行命令以" & "连接为单行。
+        /// 日志目录由C#预建（见方法内注释），不能放进命令行
         /// </summary>
         /// <returns>命令串；JDK校验失败时返回null，原因见error</returns>
         public static string BuildStartCommand(AppRecord app, string logFileName, string errorLogFileName, out string error) {
+            // 旧流程执行的是bat（日志路径在生成时固化），本流程依赖静态配置，
+            // 启动前刷新保证LogPath/JdkPath/Profiles非空且为当前配置
+            LoadSettings();
             error = ValidateJdk(app);
             if (error != null) {
                 return null;
+            }
+
+            // 日志目录预建（原CreateStartBat的FileUtils.CreateDirectory职责）：
+            // 不能拼成"if not exist 目录 mkdir 目录 & java..."——cmd的if会把同一行&
+            // 链接的后续命令全部纳入控制体，目录已存在时java整条被跳过（实测），必须代码建目录
+            if (!app.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
+                string projectLogPath = GetFullLogPath(app);
+                FileUtils.CreateDirectory(projectLogPath);
             }
 
             var parts = new List<string> { "@echo off", "chcp 65001" };
             var extLine = BuildExtLine(app);
             if (extLine != null) {
                 parts.Add(extLine);
-            }
-            var mkdirLine = BuildMkdirLine(app, logFileName);
-            if (mkdirLine != null) {
-                parts.Add(mkdirLine);
             }
             parts.Add(BuildJavaLine(app, logFileName, errorLogFileName));
             // 窗口不关闭（与start.bat末行一致）
@@ -103,15 +83,6 @@ namespace AppManager2.AMUtils {
                 return null;
             }
             return StringUtils.TxtDecode(NewLine2Space(app.Ext));
-        }
-
-        /// <summary>日志目录的mkdir行（需要输出日志时），不需要返回null</summary>
-        private static string BuildMkdirLine(AppRecord app, string logFileName) {
-            if (app.IsPrintLog || string.IsNullOrEmpty(LogPath) || string.IsNullOrEmpty(logFileName)) {
-                return null;
-            }
-            var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath + Configs.PathCharacter : LogPath) + app.Title + Configs.PathCharacter;
-            return "if not exist \"" + projectLogPath + "\" mkdir \"" + projectLogPath + "\"";
         }
 
         /// <summary>
@@ -151,7 +122,7 @@ namespace AppManager2.AMUtils {
             line.Append(" --server.port=").Append(app.Port);
             // 是否将运行日志输出，配置文件后，日志将不会在console中输出
             if (!app.IsPrintLog && !string.IsNullOrEmpty(LogPath) && !string.IsNullOrEmpty(logFileName)) {
-                var projectLogPath = (LogPath.EndsWith(Configs.PathCharacter) ? LogPath + Configs.PathCharacter : LogPath) + app.Title + Configs.PathCharacter;
+                var projectLogPath = GetFullLogPath(app);
                 // 日志文件
                 line.Append(" > \"").Append(projectLogPath).Append(logFileName).Append("\"");
                 if (!string.IsNullOrEmpty(errorLogFileName)) {

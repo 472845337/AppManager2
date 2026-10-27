@@ -22,6 +22,16 @@ namespace AppManager2.Services {
         private readonly AppRunService _runService = AppRunService.Instance;
         private readonly AppService _appService = AppService.Instance;
 
+        /// <summary>
+        /// 启动宽限期：手动启动后程序初始化耗时（端口未就绪）期间保持"启动中"状态，
+        /// 不因端口未通回落"未运行"（白）；宽限期满端口仍不通才判启动失败（红+预警）
+        /// </summary>
+        private static readonly TimeSpan StartGracePeriod = TimeSpan.FromSeconds(60);
+
+        /// <summary>启动宽限起点（section→首次发现处于启动中的时刻），离开启动中状态即移除</summary>
+        private readonly System.Collections.Generic.Dictionary<string, DateTime> _startGraceSince
+            = new System.Collections.Generic.Dictionary<string, DateTime>();
+
         /// <summary>心跳接口预期的返回内容，可在设置页自定义（保存后由VM更新）</summary>
         public string HeartBeatMsg { get; set; } = Configs.HeartBeatMsg;
 
@@ -164,6 +174,10 @@ namespace AppManager2.Services {
             }
 
             var runStat = app.RunStat;
+            // 离开启动中状态即结束宽限跟踪（成功/停止/失败/重置等任何去向）
+            if (app.RunStat != Configs.AppRunStatRunning) {
+                _startGraceSince.Remove(app.Section);
+            }
             if (HeartBeatMsg.Equals(result)) {
                 // 项目运行中（\x1b[32m绿色\x1b[0m复位，RichTextBox端由AnsiTextParser解析着色）
                 if (app.RunStat != Configs.AppRunStatSuccess && app.RunStat != Configs.AppRunStatStopping) {
@@ -179,6 +193,7 @@ namespace AppManager2.Services {
                     // 启动当次直接结束判定（老版本此处会继续走状态机把刚启动的应用判为失败并预警，属于原实现瑕疵）
                     app.IsRunning = true;
                     app.RunStat = Configs.AppRunStatRunning;
+                    _startGraceSince[app.Section] = DateTime.Now;
                     StartRequested?.Invoke(app);
                     RunStatChanged?.Invoke(app.Section, Configs.AppRunStatRunning, app.IsRunning);
                     return;
@@ -204,6 +219,20 @@ namespace AppManager2.Services {
                             LogReceived?.Invoke(app.Section, "\x1b[31mapp is fail!\x1b[0m");
                             SendWarn(app);
                             break;
+                    }
+                } else if (app.RunStat == Configs.AppRunStatRunning) {
+                    // 启动中且端口未通（IsRunning为false）：程序初始化中的预期现象，宽限期内
+                    // 保持"启动中"不回落未运行；首次发现记宽限起点，期满仍不通判启动失败（红+预警）
+                    if (!_startGraceSince.TryGetValue(app.Section, out var since)) {
+                        _startGraceSince[app.Section] = DateTime.Now;
+                        runStat = Configs.AppRunStatRunning;
+                    } else if (DateTime.Now - since < StartGracePeriod) {
+                        runStat = Configs.AppRunStatRunning;
+                    } else {
+                        _startGraceSince.Remove(app.Section);
+                        runStat = Configs.AppRunStatFail;
+                        LogReceived?.Invoke(app.Section, "\x1b[31mapp start timeout!\x1b[0m");
+                        SendWarn(app);
                     }
                 } else {
                     runStat = Configs.AppRunStatUnrun;

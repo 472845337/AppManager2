@@ -675,6 +675,61 @@ namespace AppManager2 {
 
         #endregion
 
+        #region 运行Tab标题拖拽排序（仅调整当前会话显示顺序，不持久化；实现方式与项目树拖拽一致）
+
+        // 按下起点，移动超过阈值才发起拖拽（避免和普通单击选中/关闭按钮冲突）
+        private Point _runTabDragStart;
+
+        private void RunTabControl_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e) {
+            _runTabDragStart = e.GetPosition(RunTabControl);
+        }
+
+        private void RunTabControl_PreviewMouseMove(object sender, MouseEventArgs e) {
+            if (e.LeftButton != MouseButtonState.Pressed) return;
+            var pos = e.GetPosition(RunTabControl);
+            if (Math.Abs(pos.X - _runTabDragStart.X) < SystemParameters.MinimumHorizontalDragDistance
+                && Math.Abs(pos.Y - _runTabDragStart.Y) < SystemParameters.MinimumVerticalDragDistance) return;
+            // 可视树找TabItem：Tab头才命中；选中Tab的内容(RichTextBox)挂在TabControl的内容呈现器下，
+            // 不在TabItem子树内，内容区点击/拖选文本不会误触发拖拽
+            var tabItem = FindAncestor<TabItem>(e.OriginalSource as DependencyObject);
+            if (tabItem != null) {
+                DragDrop.DoDragDrop(tabItem, tabItem, DragDropEffects.Move);
+            }
+        }
+
+        private void RunTabControl_DragOver(object sender, DragEventArgs e) {
+            e.Effects = FindAncestor<TabItem>(e.OriginalSource as DependencyObject) != null
+                ? DragDropEffects.Move
+                : DragDropEffects.None;
+            e.Handled = true;
+        }
+
+        private void RunTabControl_Drop(object sender, DragEventArgs e) {
+            e.Handled = true;
+            var targetItem = FindAncestor<TabItem>(e.OriginalSource as DependencyObject);
+            var sourceItem = e.Data.GetData(typeof(TabItem)) as TabItem;
+            var vm = ViewModel;
+            if (targetItem == null || sourceItem == null || ReferenceEquals(sourceItem, targetItem) || vm == null) return;
+            if (!(sourceItem.DataContext is AppRunTabItemModel sourceModel)
+                || !(targetItem.DataContext is AppRunTabItemModel targetModel)) return;
+
+            var tabs = vm.RunningApps;
+            var oldIndex = tabs.IndexOf(sourceModel);
+            var targetIndex = tabs.IndexOf(targetModel);
+            if (oldIndex < 0 || targetIndex < 0) return;
+
+            // 落点在目标Tab左半区插到其前、右半区插到其后（对应项目树拖拽的上下半区插入）
+            var pos = e.GetPosition(targetItem);
+            var insertIndex = pos.X < targetItem.ActualWidth / 2 ? targetIndex : targetIndex + 1;
+            if (insertIndex == oldIndex || insertIndex == oldIndex + 1) return;
+
+            tabs.Move(oldIndex, insertIndex > oldIndex ? insertIndex - 1 : insertIndex);
+            // 拖拽的Tab保持选中（索引随移动修正，TwoWay绑定同步TabControl选中态）
+            vm.SelectedTabIndex = tabs.IndexOf(sourceModel);
+        }
+
+        #endregion
+
         /// <summary>
         /// 项目树键盘焦点变化时取消选中：
         /// 焦点离开项目树（点击应用内其他控件），或焦点落在树的空白处（点击节点行以外区域，焦点移到TreeView自身），

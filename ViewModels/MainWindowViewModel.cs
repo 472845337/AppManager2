@@ -160,10 +160,11 @@ namespace AppManager2.ViewModels {
         private static readonly ImageSource ExeDefaultIcon = LoadIcon("Resources/icon/AppForm/exe.ico");
 
         // 运行状态背景色（对应老项目FreshAppColor）
-        private static readonly Brush StatRunningBrush = CreateBrush(Color.FromRgb(154, 205, 50));    // YellowGreen
-        private static readonly Brush StatSuccessBrush = CreateBrush(Color.FromRgb(144, 238, 144));  // LightGreen
-        private static readonly Brush StatFailBrush = CreateBrush(Color.FromRgb(255, 69, 0));         // OrangeRed
-        private static readonly Brush StatUnrunBrush = Brushes.White;
+        private static readonly Brush StatRunningBrush = CreateBrush(Color.FromRgb(154, 205, 50));    // YellowGreen 启动中
+        private static readonly Brush StatStoppingBrush = CreateBrush(Color.FromRgb(255, 215, 0));    // Gold 停止中（与启动中区分）
+        private static readonly Brush StatSuccessBrush = CreateBrush(Color.FromRgb(144, 238, 144));  // LightGreen 运行中
+        private static readonly Brush StatFailBrush = CreateBrush(Color.FromRgb(255, 69, 0));         // OrangeRed 失败
+        private static readonly Brush StatUnrunBrush = Brushes.White;                                 // 未运行
         // 组节点聚合色
         private static readonly Brush GroupPinkBrush = CreateBrush(Color.FromRgb(255, 192, 203));     // Pink
         private static readonly Brush GroupYellowBrush = CreateBrush(Color.FromRgb(255, 255, 0));     // Yellow
@@ -950,7 +951,7 @@ namespace AppManager2.ViewModels {
         private Brush GetStatBrush(short runStat) {
             return runStat switch {
                 Configs.AppRunStatRunning => StatRunningBrush,
-                Configs.AppRunStatStopping => StatRunningBrush,
+                Configs.AppRunStatStopping => StatStoppingBrush,
                 Configs.AppRunStatSuccess => StatSuccessBrush,
                 Configs.AppRunStatFail => StatFailBrush,
                 _ => StatUnrunBrush
@@ -1050,40 +1051,6 @@ namespace AppManager2.ViewModels {
                 return;
             }
             Process.Start("explorer.exe", $"/select,\"{app.App}\"");
-        }
-
-        /// <summary>
-        /// 节点刷新：重新生成java应用对应的启动/停止bat脚本（对应老项目CheckSection forceUpdate）
-        /// </summary>
-        private void OnFreshBat(object obj) {
-            var node = GetNode(obj);
-            if (node == null || string.IsNullOrEmpty(node.Section))
-                return;
-
-            var error = ReCreateBat(node);
-            if (error != null)
-                MessageBox.Show(error, "刷新失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-            else
-                ShowMessage("刷新成功", Brushes.Green);
-        }
-
-        /// <summary>
-        /// 重新生成bat脚本，成功返回null，失败返回错误信息
-        /// </summary>
-        private string ReCreateBat(TreeItemModel node) {
-            var app = _appService.GetAppBySection(node.Section);
-            if (app == null)
-                return $"项目[{node.Name}]未找到";
-
-            if (!Configs.AppTypeJava.Equals(app.Type))
-                return null; // 非java项目没有bat脚本
-
-            JavaAppUtils.LoadSettings();
-            var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
-            if (!bool.TrueString.Equals(result))
-                return result;
-
-            return null;
         }
 
         #endregion
@@ -1641,14 +1608,6 @@ namespace AppManager2.ViewModels {
             app.RunStat = Configs.AppRunStatUnrun;
             app.IsRunning = false;
             _appService.SaveToDb(app);
-            if (Configs.AppTypeJava.Equals(app.Type)) {
-                JavaAppUtils.LoadSettings();
-                var result = JavaAppUtils.CreateStartBat(app, Configs.LogFileInfo, Configs.LogFileError);
-                if (!bool.TrueString.Equals(result)) {
-                    MessageBox.Show(result, "脚本生成失败", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
-                }
-            }
         }
 
         #endregion
