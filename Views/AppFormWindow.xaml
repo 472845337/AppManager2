@@ -9,9 +9,6 @@
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/appform.ico"
         WindowStartupLocation="CenterOwner"
         ResizeMode="CanResizeWithGrip">
-    <Window.DataContext>
-        <vm:AppFormViewModel/>
-    </Window.DataContext>
     <Window.Resources>
         <Style TargetType="GroupBox">
             <Setter Property="Margin" Value="0 0 0 10"/>

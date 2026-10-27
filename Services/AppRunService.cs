@@ -37,7 +37,7 @@ namespace AppManager2.Services {
             if (Configs.AppTypeJava.Equals(app.Type)) {
                 var command = AMUtils.JavaAppUtils.BuildStartCommand(app, Configs.LogFileInfo, Configs.LogFileError, out var error);
                 if (command == null) {
-                    OnLog(app.Section, error);
+                    OnLog(app.Section, error, true);
                     return;
                 }
                 ExecuteApp("cmd.exe", "/c " + command, app.Ext, app.Section, true);
@@ -49,7 +49,7 @@ namespace AppManager2.Services {
                 // 启动的进程跟踪stdin，允许交互输入
                 ExecuteApp(cliPath, app.Env, app.Ext, app.Section, true);
             } else {
-                OnLog(app.Section, $"文件不存在：{cliPath}");
+                OnLog(app.Section, $"文件不存在：{cliPath}", true);
             }
         }
 
@@ -74,7 +74,7 @@ namespace AppManager2.Services {
                     // 停止脚本不跟踪，避免覆盖启动进程的跟踪
                     ExecuteApp(app.StopApp, app.Env, app.Ext, app.Section, false);
                 } else {
-                    OnLog(app.Section, $"文件不存在：{app.StopApp}");
+                    OnLog(app.Section, $"文件不存在：{app.StopApp}", true);
                 }
                 return;
             }
@@ -88,7 +88,7 @@ namespace AppManager2.Services {
                         p.Kill();
                         OnLog(app.Section, $"杀进程{app.Title}成功");
                     } catch (Exception ex) {
-                        OnLog(app.Section, $"杀进程{app.Title}失败：{ex.Message}");
+                        OnLog(app.Section, $"杀进程{app.Title}失败：{ex.Message}", true);
                     }
                 }
             }
@@ -118,7 +118,7 @@ namespace AppManager2.Services {
                 }
                 OnLog(section, $"已停止进程：{title}");
             } catch (Exception ex) {
-                OnLog(section, $"停止进程失败：{ex.Message}");
+                OnLog(section, $"停止进程失败：{ex.Message}", true);
             } finally {
                 lock (_runningProcesses) {
                     _runningProcesses.Remove(section);
@@ -133,18 +133,18 @@ namespace AppManager2.Services {
         public bool SendInput(string section, string input) {
             lock (_runningProcesses) {
                 if (!_runningProcesses.TryGetValue(section, out var process)) {
-                    OnLog(section, $"进程已结束，无法输入");
+                    OnLog(section, $"进程已结束，无法输入", true);
                     return false;
                 }
                 try {
                     if (process.HasExited) {
-                        OnLog(section, $"进程已结束，无法输入");
+                        OnLog(section, $"进程已结束，无法输入", true);
                         return false;
                     }
                     process.StandardInput.WriteLine(input);
                     return true;
                 } catch (Exception ex) {
-                    OnLog(section, $"输入错误：{ex.Message}");
+                    OnLog(section, $"输入错误：{ex.Message}", true);
                     return false;
                 }
             }
@@ -217,7 +217,7 @@ namespace AppManager2.Services {
                 };
                 process.ErrorDataReceived += (sender, e) => {
                     if (!string.IsNullOrEmpty(e.Data)) {
-                        OnLog(section, $"Err->{e.Data}");
+                        OnLog(section, e.Data, true);
                     }
                 };
                 process.Exited += (sender, e) => {
@@ -236,12 +236,14 @@ namespace AppManager2.Services {
                 process.BeginOutputReadLine();
                 process.BeginErrorReadLine();
             } catch (Exception ex) {
-                OnLog(section, $"启动进程失败：{ex.Message}");
+                OnLog(section, $"启动进程失败：{ex.Message}", true);
             }
         }
 
-        private void OnLog(string section, string line) {
-            LogReceived?.Invoke(section, line);
+        private void OnLog(string section, string line, bool isErr = false) {
+            string ansiLine = line;
+            if (isErr) { ansiLine = $"\u001b[31m{line}\u001b[0m"; }
+            LogReceived?.Invoke(section, ansiLine);
         }
     }
 }

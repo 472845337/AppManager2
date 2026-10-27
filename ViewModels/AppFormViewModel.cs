@@ -14,6 +14,8 @@ using System.Windows;
 namespace AppManager2.ViewModels {
     [AddINotifyPropertyChangedInterface]
     public class AppFormViewModel : BaseViewModel {
+        private AppRecord priApp;
+        private bool isRunning;
         public short OperateType { get; set; }
         public string Section { get; set; }
 
@@ -87,9 +89,9 @@ namespace AppManager2.ViewModels {
             ["PYTHONUNBUFFERED"] = "1"
         };
 
-        public AppFormViewModel() {
+        public AppFormViewModel(bool isRunning) {
             _appService = AppService.Instance;
-
+            this.isRunning = isRunning;
             // 初始化集合
             AppTypes = new ObservableCollection<string> { Configs.AppTypeJava, Configs.AppTypeBat, Configs.AppTypeExe };
             Groups = new ObservableCollection<string>();
@@ -145,28 +147,28 @@ namespace AppManager2.ViewModels {
         }
 
         private void LoadApp(string section) {
-            var app = _appService.GetAppBySection(section);
-            if (app != null) {
-                Section = app.Section;
-                AppType = app.Type;
-                AppTitle = app.Title;
-                AppPath = app.App;
-                StopPath = app.StopApp;
-                JdkPath = app.Jdk;
-                Port = app.Port;
-                HeartBeatUrl = app.HeartBeat;
-                ActuatorUrl = app.Actuator;
-                ExtScript = app.Ext;
-                JvmParams = app.Param;
-                EnvParams = app.Env;
-                Profiles = app.Profiles;
-                Group = app.Group;
-                IsWarn = app.IsWarn;
-                WarnUrl = app.WarnUrl;
-                AutoRun = app.AutoRun;
-                Remark = app.Remark;
-                IsPrintLog = app.IsPrintLog;
-                LogWrap = string.IsNullOrEmpty(app.LogWrap) ? Configs.LogWrapSystem : app.LogWrap;
+            priApp = _appService.GetAppBySection(section);
+            if (priApp != null) {
+                Section = priApp.Section;
+                AppType = priApp.Type;
+                AppTitle = priApp.Title;
+                AppPath = priApp.App;
+                StopPath = priApp.StopApp;
+                JdkPath = priApp.Jdk;
+                Port = priApp.Port;
+                HeartBeatUrl = priApp.HeartBeat;
+                ActuatorUrl = priApp.Actuator;
+                ExtScript = priApp.Ext;
+                JvmParams = priApp.Param;
+                EnvParams = priApp.Env;
+                Profiles = priApp.Profiles;
+                Group = priApp.Group;
+                IsWarn = priApp.IsWarn;
+                WarnUrl = priApp.WarnUrl;
+                AutoRun = priApp.AutoRun;
+                Remark = priApp.Remark;
+                IsPrintLog = priApp.IsPrintLog;
+                LogWrap = string.IsNullOrEmpty(priApp.LogWrap) ? Configs.LogWrapSystem : priApp.LogWrap;
             }
         }
 
@@ -176,12 +178,20 @@ namespace AppManager2.ViewModels {
                 MessageBox.Show(errorMsg, "验证失败", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-
+            // 如果是java spring，端口做了修改，会影响停止
+            if (Configs.AppTypeJava.Equals(AppType) && !priApp.Port.Equals(Port) && isRunning) {
+                MessageBoxResult result = MessageBox.Show("JAVA端口修改会导致无法停止，取消则恢复端口，确认保存?", "警告", MessageBoxButton.YesNoCancel);
+                if (MessageBoxResult.Cancel == result) {
+                    Port = priApp.Port;
+                    return;
+                } else if(MessageBoxResult.No == result){
+                    return;
+                }
+            }
             try {
                 var section = OperateType == Configs.OperateTypeAdd
                     ? Guid.NewGuid().ToString()
                     : Section;
-
                 var app = new AppRecord {
                     Section = section,
                     Type = AppType,

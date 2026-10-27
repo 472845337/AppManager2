@@ -979,15 +979,7 @@ namespace AppManager2.ViewModels {
                 return;
 
             var app = _appService.GetAppBySection(node.Section);
-            if (app != null && app.RunStat == Configs.AppRunStatSuccess) {
-                // 当任务在运行时进行提醒（对应老项目BtnRightUpdateClick）
-                if (MessageBoxResult.Cancel == MessageBox.Show("任务运行中，端口和驱动修改会影响程序停止，确认继续编辑?", "警告",
-                    MessageBoxButton.OKCancel, MessageBoxImage.Warning)) {
-                    return;
-                }
-            }
-
-            var window = new Views.AppFormWindow();
+            var window = new Views.AppFormWindow(app.IsRunning);
             window.SetOperateType(Configs.OperateTypeUpdate, node.Section);
             window.Owner = Application.Current.MainWindow;
             window.ShowDialog();
