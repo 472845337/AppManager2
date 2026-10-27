@@ -827,11 +827,20 @@ namespace AppManager2 {
         }
 
         /// <summary>
-        /// 日志变化时自动滚动到底部（对应老项目RichTextBox的ScrollToCaret）
+        /// 日志滚动"粘底"跟随（对应老项目RichTextBox的ScrollToCaret，升级为仅贴底时跟随）：
+        /// 用户往上翻阅历史日志时不自动滚到底，只有滚动条本就贴着底部才跟随新日志。
+        /// 用内部ScrollViewer的ScrollChanged实现——TextChanged触发时内容已增长无法回推追加前的位置，
+        /// 而ScrollChangedEventArgs带ExtentHeightChange（纵向内容变化量），可还原追加前的底界
         /// </summary>
-        private void RunLogRichTextBox_TextChanged(object sender, TextChangedEventArgs e) {
-            if (sender is RichTextBox richTextBox && richTextBox.IsLoaded) {
-                richTextBox.ScrollToEnd();
+        private void RunLogRichTextBox_ScrollChanged(object sender, ScrollChangedEventArgs e) {
+            if (!(e.OriginalSource is ScrollViewer scrollViewer) || e.ExtentHeightChange == 0) {
+                return;
+            }
+            // 追加前的可视底边 = 当前Extent - 本次变化量；与追加前的偏移比较（留2像素容差抵浮点/亚像素）
+            var bottomBefore = e.VerticalOffset + scrollViewer.ViewportHeight
+                >= scrollViewer.ExtentHeight - e.ExtentHeightChange - 2;
+            if (bottomBefore) {
+                scrollViewer.ScrollToEnd();
             }
         }
 

@@ -424,7 +424,7 @@
                                                  Background="{DynamicResource LogBgColor}" Foreground="{DynamicResource LogFontColor}" BorderThickness="0"
                                                  PreviewMouseWheel="RunLogTextBox_PreviewMouseWheel"
                                                  DataContextChanged="RunLogRichTextBox_DataContextChanged"
-                                                 TextChanged="RunLogRichTextBox_TextChanged"
+                                                 ScrollViewer.ScrollChanged="RunLogRichTextBox_ScrollChanged"
                                                  behaviors:RichTextBoxHelper.BoundDocument="{Binding LogDocument}">
                                         <RichTextBox.ContextMenu>
                                             <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
