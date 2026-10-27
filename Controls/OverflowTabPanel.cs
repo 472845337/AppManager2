@@ -56,19 +56,29 @@ namespace AppManager2.Controls {
                 _windowStart = 0;
             }
 
-            // 选中项必须落入窗口：目标在窗口右侧→右移使选中项成为右缘；
-            // 在窗口左侧→左移使选中项成为左缘。容量随窗口起点变化，迭代至稳定
+            // 窗口位置稳定：a)右侧补满 b)选中项必须落入窗口，迭代至收敛
+            // 容量随窗口起点变化，每轮用新起点重算；容量口径见循环内注释
             var selectedIdx = FindSelectedIndex();
             for (var round = 0; round < 4; round++) {
-                var capacity = ComputeVisibleCount(_windowStart, availableWidth, maxRows);
-                if (selectedIdx < 0) break;
-                int newStart;
-                if (selectedIdx < _windowStart) {
-                    newStart = selectedIdx;
-                } else if (selectedIdx >= _windowStart + capacity) {
-                    newStart = Math.Max(0, selectedIdx - capacity + 1);
-                } else {
-                    break;
+                // 右侧补满用的容量必须"从0起算"（宽度决定容量）：从当前锚点起算会被列表末尾
+                // 截断（如显示def时右侧只剩3项，容量被算成3，锚点被误判为已最优，放大窗口
+                // 后c永远不出现）；从0起算才能得出宽度实际容得下的项数，让锚点正确回退
+                var capacityFromZero = ComputeVisibleCount(0, availableWidth, maxRows);
+                int newStart = _windowStart;
+                var maxStart = Math.Max(0, InternalChildren.Count - capacityFromZero);
+                if (newStart > maxStart) {
+                    newStart = maxStart;
+                }
+                // 选中项调整用的容量按（可能已clamp的）新起点计算
+                if (selectedIdx >= 0) {
+                    var capacityAtStart = ComputeVisibleCount(newStart, availableWidth, maxRows);
+                    if (selectedIdx < newStart) {
+                        // 目标在窗口左侧：左移使选中项成为左缘
+                        newStart = selectedIdx;
+                    } else if (selectedIdx >= newStart + capacityAtStart) {
+                        // 目标在窗口右侧：右移使选中项成为右缘
+                        newStart = Math.Max(0, selectedIdx - capacityAtStart + 1);
+                    }
                 }
                 if (newStart == _windowStart) break;
                 _windowStart = newStart;
