@@ -35,6 +35,12 @@ namespace AppManager2.Services {
         /// <summary>心跳接口预期的返回内容，可在设置页自定义（保存后由VM更新）</summary>
         public string HeartBeatMsg { get; set; } = Configs.HeartBeatMsg;
 
+        // 预警运行值（设置页“应用”即时更新）：Configs.*保持启动基线不回写，
+        // 关闭时主窗口按“页面值 vs Configs基线”比对落盘
+        public bool IsWarn { get; set; }
+        public string WarnAddress { get; set; }
+        public string ServerName { get; set; }
+
         /// <summary>应用运行状态变化（可能在非UI线程触发）：section, 运行状态, 是否运行中</summary>
         public event Action<string, short, bool> RunStatChanged;
 
@@ -63,9 +69,13 @@ namespace AppManager2.Services {
             var interval = iniData[Configs.IniSectionSet][Configs.IniKeySetInterval];
 
             HeartBeatMsg = string.IsNullOrEmpty(heartBeat) ? Configs.HeartBeatMsg : heartBeat;
+            // 基线进Configs（关闭时比对），运行值留在本服务（SendWarn使用）
             Configs.IsWarn = bool.TrueString.Equals(isWarn);
             Configs.WarnAddress = warnTo;
             Configs.ServerName = serverName;
+            IsWarn = Configs.IsWarn;
+            WarnAddress = Configs.WarnAddress;
+            ServerName = Configs.ServerName;
 
             if (!string.IsNullOrEmpty(timeout) && int.TryParse(timeout, out var timeoutVal) && timeoutVal > 0) {
                 Configs.MonitorTimeout = timeoutVal;
@@ -249,19 +259,19 @@ namespace AppManager2.Services {
         /// </summary>
         private void SendWarn(AppRecord app) {
             try {
-                if (!Configs.IsWarn || !app.IsWarn) {
+                if (!IsWarn || !app.IsWarn) {
                     return;
                 }
-                if (string.IsNullOrEmpty(app.WarnUrl) && string.IsNullOrEmpty(Configs.WarnAddress)) {
+                var warnAddress = string.IsNullOrEmpty(app.WarnUrl) ? WarnAddress : app.WarnUrl;
+                if (string.IsNullOrEmpty(warnAddress)) {
                     return;
                 }
 
                 var text = new WxRobotMessage.TextClass {
-                    Content = $"[错误]{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{(string.IsNullOrEmpty(Configs.ServerName) ? IpUtils.GetLocalIp() : Configs.ServerName)}] [{app.Title}]项目异常停止，请处理！"
+                    Content = $"[错误]{DateTime.Now:yyyy-MM-dd HH:mm:ss} [{(string.IsNullOrEmpty(ServerName) ? IpUtils.GetLocalIp() : ServerName)}] [{app.Title}]项目异常停止，请处理！"
                 };
                 var wxRobotMessage = new WxRobotMessage { Msgtype = WxRobotMessage.MsgtypeText, Text = text };
-                string wxUrl = string.IsNullOrEmpty(app.WarnUrl) ? Configs.WarnAddress : app.WarnUrl;
-                HttpUtils.PostRequest(wxUrl, JsonConvert.SerializeObject(wxRobotMessage), null, Configs.MonitorTimeout * 1000);
+                HttpUtils.PostRequest(warnAddress, JsonConvert.SerializeObject(wxRobotMessage), null, Configs.MonitorTimeout * 1000);
             } catch (Exception ex) {
                 Debug.WriteLine($"预警发送失败：{ex.Message}");
             }

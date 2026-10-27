@@ -7,6 +7,7 @@
         xmlns:views="clr-namespace:AppManager2.Views"
         xmlns:vm="clr-namespace:AppManager2.ViewModels"
         xmlns:behaviors="clr-namespace:AppManager2.Behaviors"
+        xmlns:controls="clr-namespace:AppManager2.Controls"
         mc:Ignorable="d"
         Title="应用管理" Height="500" Width="600"
         Icon="pack://application:,,,/AppManager2;component/Resources/icon/Window/main.ico"
@@ -18,6 +19,70 @@
         <!-- 基于App隐式TabItem样式（含全局字色）派生，仅补Padding；否则本样式遮蔽App级样式导致Tab头字色失效 -->
         <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
             <Setter Property="Padding" Value="5 5"/>
+        </Style>
+        <!-- 溢出下拉TabControl模板（参考IntelliJ的Tab设计）：头部=下拉按钮+自绘分行面板，
+             放不下的Tab进下拉列表；选中项变化由控件重新布局换回可见区 -->
+        <Style TargetType="controls:OverflowTabControl">
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="controls:OverflowTabControl">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto"/>
+                                <RowDefinition Height="*"/>
+                            </Grid.RowDefinitions>
+                            <DockPanel Grid.Row="0">
+                                <!-- 选项卡选项按钮（参考VS2022）：菜单含多行显示开关，菜单在弹出的Popup中
+                                     DataContext断链，改用PlacementTarget回取 -->
+                                <ToggleButton VerticalAlignment="Top" x:Name="PART_TabMenuButton" DockPanel.Dock="Right" Width="26" Height="20"
+                                              Margin="1 2 0 0" Content="≡" Padding="0" Focusable="False"
+                                              ToolTip="选项卡选项">
+                                    <ToggleButton.ContextMenu>
+                                        <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
+                                            <!-- 多行显示=自适应行数（run_tab_rows=0），取消恢复上次配置的单/双行 -->
+                                            <MenuItem Header="多行显示选项卡" IsCheckable="True"
+                                                      IsChecked="{Binding IsRunTabMultiRow}"
+                                                      Command="{Binding ToggleRunTabMultiRowCommand}"/>
+                                        </ContextMenu>
+                                    </ToggleButton.ContextMenu>
+                                </ToggleButton>
+                                <!-- 右侧下拉箭头：单/双行模式常显（多行模式由控件隐藏），全部放得下时下拉里只是没有隐藏项 -->
+                                <ToggleButton VerticalAlignment="Top" x:Name="PART_OverflowButton" DockPanel.Dock="Right" Width="26" Height="20"
+                                              Margin="1 2 0 0" Content="▾" Padding="0"
+                                              ToolTip="更多运行Tab"
+                                              Focusable="False"/>
+                                <Popup x:Name="PART_OverflowPopup" PlacementTarget="{Binding ElementName=PART_OverflowButton}"
+                                       Placement="Bottom" StaysOpen="False" AllowsTransparency="True">
+                                    <Border Background="White" BorderBrush="#999" BorderThickness="1" MinWidth="120" MaxHeight="260">
+                                        <ListBox x:Name="PART_OverflowList" BorderThickness="0">
+                                            <ListBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <TextBlock Text="{Binding Title}" Margin="6 3">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Foreground" Value="Gray"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding IsRunning}" Value="True">
+                                                                        <Setter Property="Foreground" Value="Green"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
+                                                </DataTemplate>
+                                            </ListBox.ItemTemplate>
+                                        </ListBox>
+                                    </Border>
+                                </Popup>
+                                <!-- IsItemsHost：TabItem容器生成到此面板 -->
+                                <controls:OverflowTabPanel x:Name="HeaderPanel" IsItemsHost="True"
+                                                           MaxRows="{TemplateBinding MaxRows}"/>
+                            </DockPanel>
+                            <ContentPresenter Grid.Row="1" ContentSource="SelectedContent"/>
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
         </Style>
         <!-- 颜色下拉选项模板：色块+颜色名（软件设置的字体/日志颜色选择） -->
         <DataTemplate x:Key="ColorItemTemplate">
@@ -355,9 +420,8 @@
                     <GridSplitter Grid.Column="1" Width="5" HorizontalAlignment="Stretch" Background="#ddd"/>
 
                     <!-- 运行Tab：标题按项目运行顺序展示；支持拖拽标题调整顺序（仅当前会话的显示顺序，不持久化）；
-                         下钻判断用可视树找TabItem——选中的Tab内容(RichTextBox)在TabControl模板的内容呈现器里，
-                         不在TabItem子树内，内容区点击/拖选不会误触发拖拽 -->
-                    <TabControl Grid.Column="2" x:Name="RunTabControl" AllowDrop="True"
+                         MaxRows为表头行数（设置-应用监控-Tab行数）：1单行/2双行/0不限，放不下的进右侧下拉箭头 -->
+                    <controls:OverflowTabControl Grid.Column="2" x:Name="RunTabControl" AllowDrop="True" MaxRows="{Binding RunTabRows}"
                                     ItemsSource="{Binding RunningApps}" SelectedIndex="{Binding SelectedTabIndex}"
                                     PreviewMouseLeftButtonDown="RunTabControl_PreviewMouseLeftButtonDown"
                                     PreviewMouseMove="RunTabControl_PreviewMouseMove"
@@ -446,7 +510,7 @@
                                 </DockPanel>
                             </DataTemplate>
                         </TabControl.ContentTemplate>
-                    </TabControl>
+                    </controls:OverflowTabControl>
                 </Grid>
             </TabItem>
 
@@ -570,6 +634,15 @@
                                                         ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
                                                         SelectedValue="{Binding SelectedLogWrap}"
                                                         ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
+                                                </StackPanel>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="Tab行数"/>
+                                                    <!-- 运行Tab表头行数（[set] run_tab_rows）：单行/双行/自适应，
+                                                         单行/双行放不下的Tab收进右侧下拉箭头（参考IntelliJ） -->
+                                                    <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="80" Width="Auto"
+                                                        ItemsSource="{Binding RunTabRowsOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+                                                        SelectedValue="{Binding SelectedRunTabRows}"
+                                                        ToolTip="运行Tab表头显示行数：单行/双行时放不下的Tab收进右侧下拉箭头"/>
                                                 </StackPanel>
                                             </WrapPanel>
                                         </GroupBox>
@@ -752,7 +825,8 @@
                     <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right">
                         <!-- 恢复默认：重置软件设置各项为初始默认值（点击后先确认） -->
                         <Button Margin="2 2" Style="{StaticResource Btn_Warn}" Content="恢复默认" Command="{Binding ResetSoftwareSettingsCommand}" Height="36" VerticalAlignment="Bottom" ToolTip="恢复软件设置（关闭方式/字体/颜色）为默认值"/>
-                        <Button Margin="2 2" Grid.Row="1" Style="{StaticResource Btn_Pri}" Content="保存" Command="{Binding SaveSettingsCommand}" Height="36" HorizontalAlignment="Right"/>
+                        <Button Margin="2 2" Grid.Row="1" Style="{StaticResource Btn_Pri}" Content="应用" Command="{Binding ApplySettingsCommand}" Height="36" HorizontalAlignment="Right"
+                                ToolTip="把当前页面配置生效到软件（字体/颜色/监控等），落盘在关闭软件时统一处理"/>
                     </StackPanel>
                 </Grid>
             </TabItem>
@@ -788,3 +862,4 @@
         </StatusBar>
     </Grid>
 </Window>
+

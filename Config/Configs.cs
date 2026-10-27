@@ -76,6 +76,8 @@ namespace AppManager2.Config {
         public const string IniKeySetClosedType = "closed_type";
         // 设置-应用监控组的日志换行（运行日志TextWrapping的系统配置）
         public const string IniKeySetLogWrap = "log_wrap";
+        // 设置-应用监控组的运行Tab表头行数（1单行/2双行/0不限，超出进下拉，参考IntelliJ）
+        public const string IniKeySetRunTabRows = "run_tab_rows";
         // 数据库累计删除次数（达到阈值后执行VACUUM，保存于System.ini [set]）
         public const string IniKeySetDelCount = "DelCount";
 
@@ -145,6 +147,9 @@ namespace AppManager2.Config {
 
         // [set] 系统级日志换行配置（auto/none，默认不换行）：项目换行为“系统”时按此值生效
         public static string LogWrap = LogWrapNone;
+
+        // [set] 运行Tab表头行数（1单行/2双行/0不限，超出进下拉，参考IntelliJ）
+        public static int RunTabRows = 1;
 
         /// <summary>
         /// 项目换行模式解析为实际TextWrapping：空/“system”取系统配置，

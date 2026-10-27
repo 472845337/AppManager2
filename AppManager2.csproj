@@ -163,6 +163,8 @@
     <Compile Include="AMUtils\ExeIconUtils.cs" />
     <Compile Include="AMUtils\ThemeUtils.cs" />
     <Compile Include="AMUtils\AnsiTextParser.cs" />
+    <Compile Include="Controls\OverflowTabPanel.cs" />
+    <Compile Include="Controls\OverflowTabControl.cs" />
     <Compile Include="Converters\FontConverters.cs" />
     <Compile Include="Excep\BusinessException.cs" />
     <Compile Include="Views\ToolPageView.xaml.cs">

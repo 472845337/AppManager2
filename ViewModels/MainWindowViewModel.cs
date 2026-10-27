@@ -60,6 +60,37 @@ namespace AppManager2.ViewModels {
         public ObservableCollection<LogWrapOption> LogWrapOptions { get; set; }
         public string SelectedLogWrap { get; set; } = Configs.LogWrapNone;
 
+        // 运行Tab表头行数（1单行/2双行/0不限，超出部分收进右侧下拉，参考IntelliJ）：
+        // SelectedRunTabRows为设置页下拉选中Code，RunTabRows为控件绑定值；
+        // IsRunTabMultiRow为选项卡选项菜单的"多行显示"勾选态（=自适应行数）
+        public ObservableCollection<LogWrapOption> RunTabRowsOptions { get; set; }
+        [OnChangedMethod(nameof(OnSelectedRunTabRowsChanged))]
+        public string SelectedRunTabRows { get; set; } = "1";
+        public int RunTabRows { get; set; } = 1;
+        public bool IsRunTabMultiRow { get; set; }
+        // 多行显示取消后恢复的单/双行配置
+        private int _runTabRowsRestore = 1;
+        public ICommand ToggleRunTabMultiRowCommand { get; set; }
+
+        private void OnSelectedRunTabRowsChanged() {
+            // 非法值回落单行
+            RunTabRows = int.TryParse(SelectedRunTabRows, out var rows) && rows >= 0 ? rows : 1;
+            IsRunTabMultiRow = RunTabRows == 0;
+        }
+
+        /// <summary>
+        /// 选项卡选项菜单-多行显示选项卡开关（参考VS2022）：勾选=自适应多行（0），
+        /// 取消=恢复上次的单/双行配置；即时更新界面，落盘在主窗口关闭时统一处理
+        /// </summary>
+        private void OnToggleRunTabMultiRow(object obj) {
+            if (RunTabRows == 0) {
+                SelectedRunTabRows = _runTabRowsRestore.ToString();
+            } else {
+                _runTabRowsRestore = RunTabRows;
+                SelectedRunTabRows = "0";
+            }
+        }
+
         // 应用设置（对应老项目AppSetGroup：心跳字符/通知+预警地址/机器名）
         public string HeartBeatMsg { get; set; }
         public string ServerName { get; set; }
@@ -110,7 +141,7 @@ namespace AppManager2.ViewModels {
         }
 
         // 设置页命令
-        public ICommand SaveSettingsCommand { get; set; }
+        public ICommand ApplySettingsCommand { get; set; }
         public RelayCommand ResetSoftwareSettingsCommand { get; set; }
         public ICommand BrowseJdkCommand { get; set; }
         public ICommand BrowseLogCommand { get; set; }
@@ -180,7 +211,11 @@ namespace AppManager2.ViewModels {
             AutoRunItems = new ObservableCollection<AutoRunItemModel>();
             ProfilesOptions = new ObservableCollection<string> { "dev", "test", "prod" };
             LogWrapOptions = new ObservableCollection<LogWrapOption>(LogWrapModes.SetOptions);
-            FontOptions = FontsUtils.GetSystemFonts();
+            RunTabRowsOptions = new ObservableCollection<LogWrapOption> {
+                new LogWrapOption { Code = "1", Text = "单行" },
+                new LogWrapOption { Code = "2", Text = "双行" },
+                new LogWrapOption { Code = "0", Text = "自适应" },
+            };
 
             InitializeCommands();
             WireEvents();
@@ -219,6 +254,7 @@ namespace AppManager2.ViewModels {
             SendInputCommand = new RelayCommand(OnSendInput);
             ExpandAllCommand = new RelayCommand(OnExpandAll);
             CollapseAllCommand = new RelayCommand(OnCollapseAll);
+            ToggleRunTabMultiRowCommand = new RelayCommand(OnToggleRunTabMultiRow);
             DetailAppCommand = new RelayCommand(OnDetailApp);
             WarnSwitchAppCommand = new RelayCommand(OnWarnSwitchApp);
             LocateFileCommand = new RelayCommand(OnLocateFile);
@@ -227,7 +263,7 @@ namespace AppManager2.ViewModels {
             GroupDeleteCommand = new RelayCommand(OnGroupDelete);
             GroupWarnOnCommand = new RelayCommand(OnGroupWarnOn);
             GroupWarnOffCommand = new RelayCommand(OnGroupWarnOff);
-            SaveSettingsCommand = new RelayCommand(OnSaveSettings);
+            ApplySettingsCommand = new RelayCommand(OnApplySettings);
             ResetSoftwareSettingsCommand = new RelayCommand(OnResetSoftwareSettings, o => {
                 bool canExecute = true;
                 if((GlobalFontFamily.Equals(Configs.DefaultFontFamily) && GlobalFontSizeText.Equals("12") && GlobalFontColor.Equals("Black")
@@ -274,8 +310,7 @@ namespace AppManager2.ViewModels {
         private void LoadData() {
             _appService.LoadFromDb();
             _monitorService.LoadSettings(); // 监控/预警配置加载到Configs（对应老项目InitEnv）
-            LoadEnvSettings();              // 设置页各输入项加载（对应老项目InitEnv的UI部分）
-            LoadSplitRatio();
+            // 设置页各输入项/分栏比例/Tab行数等ini加载由主窗口构造函数统一处理（LoadEnvSettings等）
             BuildTree();
             InitAppMonitor(); // bat脚本校验 + 自启动 + 启动监控定时器（对应老项目InitApp后半段）
             ShowMessage("项目加载完成", Brushes.Green, seconds: 10);
@@ -298,35 +333,11 @@ namespace AppManager2.ViewModels {
         }
 
 
-        private void LoadSplitRatio() {
-            try {
-                var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
-                if (iniData.Sections.ContainsSection(Configs.IniSectionApp)) {
-                    var ratioStr = iniData[Configs.IniSectionApp][Configs.IniKeyAppSplitRatio];
-                    if (!string.IsNullOrEmpty(ratioStr) && double.TryParse(ratioStr, out var ratio)) {
-                        TreeSplitRatio = Math.Max(0.1, Math.Min(0.8, ratio)); // 限制在10%-80%之间
-                        RunSplitRatio = 1 - TreeSplitRatio;
-                    }
-                }
-            } catch (Exception) {
-                // 如果加载失败，使用默认值
-                TreeSplitRatio = 0.25;
-                RunSplitRatio = 0.75;
-            }
-            // 按保存格式缓存当前值（SaveSplitRatio保存前比对用）
-            Configs.TreeSplitRatio = TreeSplitRatio.ToString("F3");
-        }
-
-        private void SaveSplitRatio() {
-            var iniData = new IniData();
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionApp, Configs.IniKeyAppSplitRatio, ref Configs.TreeSplitRatio, TreeSplitRatio.ToString("F3"));
-            IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
-        }
+        // LoadSplitRatio/LoadRunTabRows/LoadEnvSettings的ini加载已移至MainWindow构造函数统一处理
 
         private void OnTreeSplitRatioChanged() {
-            // 限制范围在10%-80%之间
+            // 限制范围在10%-80%之间（拖动只更新运行值，落盘在主窗口关闭时统一处理）
             TreeSplitRatio = Math.Max(0.1, Math.Min(0.8, TreeSplitRatio));
-            SaveSplitRatio();
         }
 
         private void OnSelectedAppChanged() {
@@ -335,7 +346,7 @@ namespace AppManager2.ViewModels {
 
         // —— 软件设置：界面字体/颜色（ThemeUtils启动时加载到Configs并应用，保存后即时生效）——
         /// <summary>字体类型下拉选项</summary>
-        public static List<string> FontOptions;
+        public static List<string> FontOptions = FontsUtils.GetSystemFonts();
         /// <summary>字号下拉选项</summary>
         public static readonly string[] FontSizeOptions = {
             "10", "11", "12", "13", "14", "15", "16", "17", "18", "20", "22", "24", "28"
@@ -372,141 +383,67 @@ namespace AppManager2.ViewModels {
 
         #region 设置页（对应老项目FormSetEvent）
 
-        /// <summary>
-        /// 设置页各输入项加载（对应老项目InitEnv的UI赋值部分）
-        /// </summary>
-        private void LoadEnvSettings() {
-            var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
-            HeartBeatMsg = iniData[Configs.IniSectionSet][Configs.IniKeySetHeartBeat];
-            IsWarnEnabled = bool.TrueString.Equals(iniData[Configs.IniSectionSet][Configs.IniKeySetIsWarn]);
-            WarnUrl = iniData[Configs.IniSectionSet][Configs.IniKeySetWarnTo];
-            ServerName = iniData[Configs.IniSectionSet][Configs.IniKeySetServerName];
-            JdkPath = iniData[Configs.IniSectionSet][Configs.IniKeySetJdkpath];
-            SelectedProfile = iniData[Configs.IniSectionSet][Configs.IniKeySetProfiles];
-            LogPath = iniData[Configs.IniSectionSet][Configs.IniKeySetLogpath];
-            MonitorTimeoutText = iniData[Configs.IniSectionSet][Configs.IniKeySetTimeout];
-            MonitorIntervalText = iniData[Configs.IniSectionSet][Configs.IniKeySetInterval];
-            if (string.IsNullOrEmpty(MonitorTimeoutText)) MonitorTimeoutText = "15";
-            if (string.IsNullOrEmpty(MonitorIntervalText)) MonitorIntervalText = "5";
-
-            // 系统级日志换行：只认auto/none，缺省与非法值按默认不换行处理
-            var logWrap = iniData[Configs.IniSectionSet][Configs.IniKeySetLogWrap];
-            if (!Configs.LogWrapAuto.Equals(logWrap) && !Configs.LogWrapNone.Equals(logWrap)) {
-                logWrap = Configs.LogWrapNone;
-            }
-            SelectedLogWrap = logWrap;
-
-            // 各项加载到Configs缓存（SaveSettings保存前比对，值变化才写盘）
-            Configs.HeartBeat = HeartBeatMsg ?? string.Empty;
-            Configs.IsWarn = IsWarnEnabled;
-            Configs.WarnAddress = WarnUrl ?? string.Empty;
-            Configs.ServerName = ServerName ?? string.Empty;
-            Configs.JdkPath = JdkPath ?? string.Empty;
-            Configs.Profiles = SelectedProfile ?? string.Empty;
-            Configs.LogPath = LogPath ?? string.Empty;
-            Configs.TimeoutText = MonitorTimeoutText ?? string.Empty;
-            Configs.IntervalText = MonitorIntervalText ?? string.Empty;
-            Configs.LogWrap = logWrap;
-
-            // 数据库删除计数（达到阈值后执行VACUUM）：PriDelCount存启动初始值，
-            // 主窗口关闭时与DelCount比对，不同才写盘
-            Configs.PriDelCount = int.TryParse(iniData[Configs.IniSectionSet][Configs.IniKeySetDelCount], out var delCount) ? delCount : 0;
-            Configs.DelCount = Configs.PriDelCount;
-
-            // 界面字体/颜色等软件设置：ThemeUtils.Init启动时已加载到Configs并应用，同步到设置页显示
-            SyncSoftwareSettingsToView();
-
-            var closedType = iniData[Configs.IniSectionSet][Configs.IniKeySetClosedType];
-            if (string.IsNullOrEmpty(closedType)) {
-                closedType = Configs.ClosedTypeExit;
-                IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, Configs.IniSectionSet, Configs.IniKeySetClosedType, Configs.ClosedTypeExit);
-            }
-            Configs.ClosedType = closedType;
-            IsClosedExit = Configs.ClosedTypeExit.Equals(closedType);
-            IsClosedMin = Configs.ClosedTypeMin.Equals(closedType);
-
-            // JDK/配置/日志静态值刷新（bat脚本生成使用）
-            JavaAppUtils.LoadSettings();
-        }
+        // LoadEnvSettings的ini加载已移至MainWindow构造函数统一处理（含Configs缓存与关闭方式默认写）
 
         /// <summary>
-        /// 保存设置（对应老项目SetSaveButton_Click）：写入System.ini [set]，
-        /// 同步Configs/JavaAppUtils静态值与监控运行参数
+        /// 应用设置（设置页”应用”按钮，对应老项目SetSaveButton_Click的生效部分）：
+        /// 把页面当前值生效到运行时——界面字体/颜色写资源、JDK/配置/日志同步JavaAppUtils静态值、
+        /// 监控参数即时更新。不写ini也不回写Configs（Configs保持启动基线），
+        /// 落盘统一在主窗口关闭时按”页面值 vs Configs基线”比对处理
         /// </summary>
-        public void SaveSettings() {
-            var heartBeat = HeartBeatMsg ?? string.Empty;
-            var closedType = IsClosedExit ? Configs.ClosedTypeExit : Configs.ClosedTypeMin;
-            var systemIni = Configs.AppPath + "\\" + Configs.SystemIniPath;
-
-            // 与Configs缓存比对，只有值变化才写入IniData（参考XStart2.0的ConfigIniData方式）；
-            // 无变化时IniData为空，SaveIniData不写盘
-            var iniData = new IniData();
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetHeartBeat, ref Configs.HeartBeat, heartBeat);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetIsWarn, ref Configs.IsWarn, IsWarnEnabled);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetWarnTo, ref Configs.WarnAddress, WarnUrl ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetServerName, ref Configs.ServerName, ServerName ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetJdkpath, ref Configs.JdkPath, JdkPath ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetProfiles, ref Configs.Profiles, SelectedProfile ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogpath, ref Configs.LogPath, LogPath ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetClosedType, ref Configs.ClosedType, closedType);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTimeout, ref Configs.TimeoutText, MonitorTimeoutText ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetInterval, ref Configs.IntervalText, MonitorIntervalText ?? string.Empty);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogWrap, ref Configs.LogWrap, SelectedLogWrap ?? Configs.LogWrapNone);
-
-            // 界面字体/颜色（字号解析失败保持当前值；保存后ApplyResources即时生效）
+        public void ApplySettings() {
+            // 字号解析失败保持当前生效值（基线值），日志字号限8~40
             var globalFontSize = int.TryParse(GlobalFontSizeText, out var gfs) ? gfs : Configs.GlobalFontSize;
             var btnFontSize = int.TryParse(BtnFontSizeText, out var bfs) ? bfs : Configs.BtnFontSize;
             var treeFontSize = int.TryParse(TreeFontSizeText, out var tfs) ? tfs : Configs.TreeFontSize;
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontFamily, ref Configs.GlobalFontFamily, GlobalFontFamily ?? Configs.GlobalFontFamily);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontSize, ref Configs.GlobalFontSize, globalFontSize);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontColor, ref Configs.GlobalFontColor, GlobalFontColor ?? Configs.GlobalFontColor);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontFamily, ref Configs.BtnFontFamily, BtnFontFamily ?? Configs.BtnFontFamily);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontSize, ref Configs.BtnFontSize, btnFontSize);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontFamily, ref Configs.TreeFontFamily, TreeFontFamily ?? Configs.TreeFontFamily);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontSize, ref Configs.TreeFontSize, treeFontSize);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontColor, ref Configs.TreeFontColor, TreeFontColor ?? Configs.TreeFontColor);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontColor, ref Configs.LogFontColor, LogFontColor ?? Configs.LogFontColor);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogBgColor, ref Configs.LogBgColor, LogBgColor ?? Configs.LogBgColor);
-            // 日志字号（启动初始值，限8~40）；字体随保存即时生效，已开Tab的字号按新建Tab起生效
             var logFontSize = int.TryParse(LogFontSizeText, out var lfsVal) ? Math.Max(8, Math.Min(40, lfsVal)) : Configs.LogFontSize;
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontSize, ref Configs.LogFontSize, logFontSize);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontFamily, ref Configs.LogFontFamily, LogFontFamily ?? Configs.LogFontFamily);
-            IniParserUtils.SaveIniData(systemIni, iniData);
 
-            // 界面字体/颜色立即生效
-            ThemeUtils.ApplyResources();
+            // 界面字体/颜色立即生效（显式值直写资源，不经过Configs）
+            ThemeUtils.ApplyResources(
+                GlobalFontFamily, globalFontSize, GlobalFontColor,
+                BtnFontFamily, btnFontSize,
+                TreeFontFamily, treeFontSize, TreeFontColor,
+                LogFontColor, LogBgColor, logFontSize, LogFontFamily);
 
             // 日志字体可能变化，各运行Tab的不换行宽度按新字体全量重算
             foreach (var tab in RunningApps) {
                 tab.RefreshWrapWidth();
             }
 
-            // 静态值同步（Configs.*已由上面的比对更新），JdkPath/Profiles/LogPath重新从ini加载
-            JavaAppUtils.LoadSettings();
-            _monitorService.HeartBeatMsg = string.IsNullOrEmpty(heartBeat) ? Configs.HeartBeatMsg : heartBeat;
+            // JDK/配置/日志静态值直接同步（bat脚本生成用；不能走LoadSettings回读ini——尚未落盘）
+            JavaAppUtils.JdkPath = JdkPath ?? string.Empty;
+            JavaAppUtils.Profiles = SelectedProfile ?? string.Empty;
+            JavaAppUtils.LogPath = LogPath ?? string.Empty;
 
+            // 监控参数即时生效（预警开关/地址/机器名为服务运行值，Configs保持基线）
+            var heartBeat = HeartBeatMsg ?? string.Empty;
+            _monitorService.HeartBeatMsg = string.IsNullOrEmpty(heartBeat) ? Configs.HeartBeat : heartBeat;
+            _monitorService.IsWarn = IsWarnEnabled;
+            _monitorService.WarnAddress = WarnUrl ?? string.Empty;
+            _monitorService.ServerName = ServerName ?? string.Empty;
             if (int.TryParse(MonitorTimeoutText, out var timeout) && timeout > 0) {
                 Configs.MonitorTimeout = timeout;
             }
             if (int.TryParse(MonitorIntervalText, out var interval) && interval > 0) {
                 Configs.MonitorInterval = interval;
-                _monitorService.UpdateInterval(); // 频次立即生效
+                _monitorService.UpdateInterval();
             }
 
             // 系统换行配置变化后，项目为“系统”模式的运行Tab按新配置生效
             RefreshRunTabsWrapping();
 
-            ShowMessage("保存成功", Brushes.Green);
+            ShowMessage("已应用", Brushes.Green);
         }
 
-        private void OnSaveSettings(object obj) {
-            SaveSettings();
+        private void OnApplySettings(object obj) {
+            ApplySettings();
         }
 
         /// <summary>
         /// Configs中的软件设置值同步到设置页各绑定属性显示
+        /// （主窗口LoadEnvSettings与本VM的恢复默认两处调用）
         /// </summary>
-        private void SyncSoftwareSettingsToView() {
+        public void SyncSoftwareSettingsToView() {
             GlobalFontFamily = Configs.GlobalFontFamily;
             GlobalFontSizeText = Configs.GlobalFontSize.ToString();
             GlobalFontColor = Configs.GlobalFontColor;
@@ -519,14 +456,15 @@ namespace AppManager2.ViewModels {
             LogBgColor = Configs.LogBgColor;
             LogFontSizeText = Configs.LogFontSize.ToString();
             LogFontFamily = Configs.LogFontFamily;
+            SelectedRunTabRows = Configs.RunTabRows.ToString();
             IsClosedExit = Configs.ClosedTypeExit.Equals(Configs.ClosedType);
             IsClosedMin = Configs.ClosedTypeMin.Equals(Configs.ClosedType);
         }
 
         /// <summary>
         /// 恢复软件设置为默认配置（对应软件设置页“恢复默认”按钮）：
-        /// 确认后把关闭方式/界面字体/按钮字体/应用树/日志的各项设置重置为默认值，
-        /// 与Configs当前值比对后只把变化的键写入ini，并即时生效
+        /// 把关闭方式/界面字体/按钮字体/应用树/日志的各项默认值赋到页面属性并立即应用生效；
+        /// 不写ini不回写Configs（Configs保持启动基线），落盘在主窗口关闭时按基线比对处理
         /// </summary>
         private void OnResetSoftwareSettings(object obj) {
             if (MessageBoxResult.OK != MessageBox.Show("确认恢复软件设置为默认配置？\r\n当前的自定义字体、颜色、关闭方式等设置将被重置。",
@@ -534,27 +472,25 @@ namespace AppManager2.ViewModels {
                 return;
             }
 
-            var systemIni = Configs.AppPath + "\\" + Configs.SystemIniPath;
-            // 默认值与Configs各字段初始值保持一致；ConfigIniData比对当前值，变化才写键并更新Configs
-            var iniData = new IniData();
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetClosedType, ref Configs.ClosedType, Configs.ClosedTypeExit);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontFamily, ref Configs.GlobalFontFamily, Configs.DefaultFontFamily);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontSize, ref Configs.GlobalFontSize, 12);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetFontColor, ref Configs.GlobalFontColor, "Black");
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontFamily, ref Configs.BtnFontFamily, Configs.DefaultFontFamily);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetBtnFontSize, ref Configs.BtnFontSize, 14);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontFamily, ref Configs.TreeFontFamily, Configs.DefaultFontFamily);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontSize, ref Configs.TreeFontSize, 16);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetTreeFontColor, ref Configs.TreeFontColor, "Black");
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontColor, ref Configs.LogFontColor, "White");
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogBgColor, ref Configs.LogBgColor, "Black");
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontSize, ref Configs.LogFontSize, 14);
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSet, Configs.IniKeySetLogFontFamily, ref Configs.LogFontFamily, "Consolas");
-            IniParserUtils.SaveIniData(systemIni, iniData);
+            // 默认值与Configs各字段初始值保持一致，直接赋到页面属性
+            GlobalFontFamily = Configs.DefaultFontFamily;
+            GlobalFontSizeText = "12";
+            GlobalFontColor = "Black";
+            BtnFontFamily = Configs.DefaultFontFamily;
+            BtnFontSizeText = "14";
+            TreeFontFamily = Configs.DefaultFontFamily;
+            TreeFontSizeText = "16";
+            TreeFontColor = "Black";
+            LogFontColor = "White";
+            LogBgColor = "Black";
+            LogFontSizeText = "14";
+            LogFontFamily = "Consolas";
+            IsClosedExit = true;
+            SelectedLogWrap = Configs.LogWrapNone;
+            SelectedRunTabRows = "1";
 
-            // 设置页显示同步 + 界面即时生效
-            SyncSoftwareSettingsToView();
-            ThemeUtils.ApplyResources();
+            // 默认值立即应用生效
+            ApplySettings();
             ShowMessage("已恢复默认设置", Brushes.Green);
         }
 
@@ -646,7 +582,13 @@ namespace AppManager2.ViewModels {
 
             var allApps = _appService.GetAllSectionDic();
             var groupList = _appService.GroupList ?? new List<string>();
-            var collapsedGroups = LoadCollapsedGroups();
+            // 收缩组名单来自Configs（主窗口启动时LoadTreeCollapsedState已加载ini，VM不读ini）
+            var collapsedGroups = new HashSet<string>();
+            foreach (var name in (Configs.TreeCollapsed ?? string.Empty).Split('|')) {
+                if (!string.IsNullOrEmpty(name)) {
+                    collapsedGroups.Add(name);
+                }
+            }
             // 按Sort排序（拖拽排序持久化后，启动按上次排定的顺序展示）
             var orderedSections = _appService.GetAllSections()
                 .OrderBy(s => _appService.GetAppBySection(s)?.Sort ?? 0)
@@ -771,46 +713,8 @@ namespace AppManager2.ViewModels {
 
         #region 项目树组展开/收缩状态记忆
 
-        /// <summary>
-        /// 读取上次关闭前处于收缩状态的组名单（System.ini [app] tree_collapsed，|分隔）
-        /// </summary>
-        private HashSet<string> LoadCollapsedGroups() {
-            var set = new HashSet<string>();
-            try {
-                var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
-                var collapsed = iniData[Configs.IniSectionApp][Configs.IniKeyAppTreeCollapsed];
-                // 缓存原始值（SaveTreeExpandState保存前比对用）
-                Configs.TreeCollapsed = collapsed ?? string.Empty;
-                if (!string.IsNullOrEmpty(collapsed)) {
-                    foreach (var name in collapsed.Split('|')) {
-                        if (!string.IsNullOrEmpty(name)) {
-                            set.Add(name);
-                        }
-                    }
-                }
-            } catch (Exception) {
-                // 读取失败按全部展开处理
-            }
-            return set;
-        }
-
-        /// <summary>
-        /// 保存当前收缩的组名单（关闭程序前由窗口调用）
-        /// </summary>
-        public void SaveTreeExpandState() {
-            try {
-                var collapsed = AppTree
-                    .Where(n => n.Flag == Configs.NodeFlagGroup && !n.IsExpanded && !string.IsNullOrEmpty(n.GroupName))
-                    .Select(n => n.GroupName)
-                    .ToList();
-                var iniData = new IniData();
-                IniParserUtils.ConfigIniData(iniData, Configs.IniSectionApp, Configs.IniKeyAppTreeCollapsed,
-                    ref Configs.TreeCollapsed, string.Join("|", collapsed));
-                IniParserUtils.SaveIniData(Configs.AppPath + "\\" + Configs.SystemIniPath, iniData);
-            } catch (Exception) {
-                // 保存失败不影响关闭流程
-            }
-        }
+        // 收缩组名单的ini加载在主窗口构造函数（LoadTreeCollapsedState→Configs.TreeCollapsed），
+        // 保存也在主窗口关闭时统一处理（PreCloseSaveData，直接读AppTree）
 
         /// <summary>
         /// 拖拽排序落定后按树序重排Sort并入库（对应老项目SortApp）：

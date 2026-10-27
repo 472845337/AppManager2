@@ -50,19 +50,34 @@ namespace AppManager2.AMUtils {
         /// 把Configs中的字体/颜色写入应用资源，DynamicResource引用处即时更新
         /// </summary>
         public static void ApplyResources() {
+            ApplyResources(Configs.GlobalFontFamily, Configs.GlobalFontSize, Configs.GlobalFontColor,
+                Configs.BtnFontFamily, Configs.BtnFontSize,
+                Configs.TreeFontFamily, Configs.TreeFontSize, Configs.TreeFontColor,
+                Configs.LogFontColor, Configs.LogBgColor, Configs.LogFontSize, Configs.LogFontFamily);
+        }
+
+        /// <summary>
+        /// 按显式值应用界面外观（设置页"应用"用：页面值只生效到资源，不写Configs——
+        /// Configs保持启动基线，主窗口关闭时比对基线决定是否落盘）
+        /// </summary>
+        public static void ApplyResources(
+            string globalFontFamily, int globalFontSize, string globalFontColor,
+            string btnFontFamily, int btnFontSize,
+            string treeFontFamily, int treeFontSize, string treeFontColor,
+            string logFontColor, string logBgColor, int logFontSize, string logFontFamily) {
             var res = Application.Current.Resources;
-            res[KeyAppFontFamily] = new FontFamily(Configs.GlobalFontFamily);
-            res[KeyAppFontSize] = (double)Configs.GlobalFontSize;
-            res[KeyAppFontColor] = BrushOf(Configs.GlobalFontColor);
-            res[KeyBtnFontFamily] = new FontFamily(Configs.BtnFontFamily);
-            res[KeyBtnFontSize] = (double)Configs.BtnFontSize;
-            res[KeyTreeFontFamily] = new FontFamily(Configs.TreeFontFamily);
-            res[KeyTreeFontSize] = (double)Configs.TreeFontSize;
-            res[KeyTreeFontColor] = BrushOf(Configs.TreeFontColor);
-            res[KeyLogFontColor] = BrushOf(Configs.LogFontColor);
-            res[KeyLogBgColor] = BrushOf(Configs.LogBgColor);
-            res[KeyLogFontSize] = (double)Configs.LogFontSize;
-            res[KeyLogFontFamily] = new FontFamily(Configs.LogFontFamily);
+            res[KeyAppFontFamily] = new FontFamily(string.IsNullOrEmpty(globalFontFamily) ? Configs.DefaultFontFamily : globalFontFamily);
+            res[KeyAppFontSize] = (double)globalFontSize;
+            res[KeyAppFontColor] = BrushOf(globalFontColor) ?? Brushes.Black;
+            res[KeyBtnFontFamily] = new FontFamily(string.IsNullOrEmpty(btnFontFamily) ? Configs.DefaultFontFamily : btnFontFamily);
+            res[KeyBtnFontSize] = (double)btnFontSize;
+            res[KeyTreeFontFamily] = new FontFamily(string.IsNullOrEmpty(treeFontFamily) ? Configs.DefaultFontFamily : treeFontFamily);
+            res[KeyTreeFontSize] = (double)treeFontSize;
+            res[KeyTreeFontColor] = BrushOf(treeFontColor) ?? Brushes.Black;
+            res[KeyLogFontColor] = BrushOf(logFontColor) ?? Brushes.White;
+            res[KeyLogBgColor] = BrushOf(logBgColor) ?? Brushes.Black;
+            res[KeyLogFontSize] = (double)logFontSize;
+            res[KeyLogFontFamily] = new FontFamily(string.IsNullOrEmpty(logFontFamily) ? "Consolas" : logFontFamily);
         }
 
         /// <summary>

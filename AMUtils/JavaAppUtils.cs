@@ -15,14 +15,23 @@ namespace AppManager2.AMUtils {
         public static string JdkPath { get; set; }
         public static string LogPath { get; set; }
 
+        // ini只在进程内首次加载一次：设置页“应用”会直接更新上面的运行值（不落盘），
+        // 后续LoadSettings调用（bat重建/启动命令等）保留运行值，不回读ini覆盖
+        private static bool _settingsLoaded;
+
         /// <summary>
-        /// 从 System.ini 加载全局设置（JDK、日志目录、运行环境），供脚本生成使用
+        /// 从 System.ini 加载全局设置（JDK、日志目录、运行环境），供脚本生成使用；
+        /// 首次调用后为空操作（运行值以“应用”更新为准，落盘在主窗口关闭时统一处理）
         /// </summary>
         public static void LoadSettings() {
+            if (_settingsLoaded) {
+                return;
+            }
             var iniData = IniParserUtils.GetIniData(Configs.AppPath + "\\" + Configs.SystemIniPath);
             JdkPath = iniData[Configs.IniSectionSet][Configs.IniKeySetJdkpath];
             Profiles = iniData[Configs.IniSectionSet][Configs.IniKeySetProfiles];
             LogPath = iniData[Configs.IniSectionSet][Configs.IniKeySetLogpath];
+            _settingsLoaded = true;
         }
         private static string GetFullLogPath(AppRecord app) {
             return (LogPath.EndsWith(Configs.PathCharacter) ? LogPath : (LogPath + Configs.PathCharacter)) + app.Title + Configs.PathCharacter;
