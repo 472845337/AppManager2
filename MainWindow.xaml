@@ -34,7 +34,7 @@
                             <DockPanel Grid.Row="0">
                                 <!-- 选项卡选项按钮（参考VS2022）：菜单含多行显示开关，菜单在弹出的Popup中
                                      DataContext断链，改用PlacementTarget回取 -->
-                                <ToggleButton VerticalAlignment="Top" x:Name="PART_TabMenuButton" DockPanel.Dock="Right" Width="26" Height="20"
+                                <ToggleButton VerticalAlignment="Top" x:Name="PART_TabMenuButton" DockPanel.Dock="Right" Width="20" Height="20"
                                               Margin="1 2 0 0" Content="≡" Padding="0" Focusable="False"
                                               ToolTip="选项卡选项">
                                     <ToggleButton.ContextMenu>
@@ -47,7 +47,7 @@
                                     </ToggleButton.ContextMenu>
                                 </ToggleButton>
                                 <!-- 右侧下拉箭头：单/双行模式常显（多行模式由控件隐藏），全部放得下时下拉里只是没有隐藏项 -->
-                                <ToggleButton VerticalAlignment="Top" x:Name="PART_OverflowButton" DockPanel.Dock="Right" Width="26" Height="20"
+                                <ToggleButton VerticalAlignment="Top" x:Name="PART_OverflowButton" DockPanel.Dock="Right" Width="20" Height="20"
                                               Margin="1 2 0 0" Content="▾" Padding="0"
                                               ToolTip="更多运行Tab"
                                               Focusable="False"/>
@@ -232,9 +232,9 @@
             <TabItem Header="应用管理" Width="80">
                 <Grid x:Name="AppTabGrid">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition x:Name="TreeColumn" MinWidth="200" Width="{Binding TreeSplitRatio, Converter={StaticResource SplitRatioConverter}, Mode=TwoWay}"/>
+                        <ColumnDefinition x:Name="TreeColumn" MinWidth="100" Width="{Binding TreeSplitRatio, Converter={StaticResource SplitRatioConverter}, Mode=TwoWay}"/>
                         <ColumnDefinition Width="5"/>
-                        <ColumnDefinition MinWidth="300" Width="{Binding RunSplitRatio, Converter={StaticResource SplitRatioConverter}, Mode=TwoWay}"/>
+                        <ColumnDefinition MinWidth="60" Width="{Binding RunSplitRatio, Converter={StaticResource SplitRatioConverter}, Mode=TwoWay}"/>
                     </Grid.ColumnDefinitions>
                     <Grid Grid.Column="0" Margin="5">
                         <Grid.RowDefinitions>
@@ -611,42 +611,43 @@
                                             <WrapPanel x:Name="AutoRunPanel" Margin="5"/>
                                         </ScrollViewer>
                                     </GroupBox>
+                                    <!-- 监听：端口/心跳判定的超时时间与频次 -->
+                                    <GroupBox Grid.Column="1" Header="应用监控" Padding="5" Margin="10,5,0,10">
+                                        <Grid Grid.Column="1">
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                                <RowDefinition Height="Auto"/>
+                                            </Grid.RowDefinitions>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition/>
+                                                <ColumnDefinition/>
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Grid.Row="0" Grid.Column="0" Style="{StaticResource FormLabel_Style}" Text="超      时/s："/>
+                                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource FormValue_Style}" Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}"
+Template="{StaticResource PlaceHolder}" Tag="15" MinWidth="50" Width="Auto"/>
+                                            <TextBlock Grid.Row="0" Grid.Column="2" Style="{StaticResource FormLabel_Style}" Text="频      次/s："/>
+                                            <TextBox Grid.Row="0" Grid.Column="3" Style="{StaticResource FormValue_Style}" Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}"
+Template="{StaticResource PlaceHolder}" Tag="5" MinWidth="50" Width="Auto"/>
+                                            <TextBlock Grid.Row="1" Grid.Column="0" Style="{StaticResource FormLabel_Style}" Text="日 志 换 行："/>
+                                            <!-- 系统级换行配置（[set] log_wrap，默认不换行）：项目换行为“系统”时按此生效 -->
+                                            <ComboBox Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="3" Style="{StaticResource FormValue_Style}" MinWidth="110" Width="Auto"
+ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+SelectedValue="{Binding SelectedLogWrap}"
+ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
+                                            <TextBlock Grid.Row="2" Grid.Column="0" Style="{StaticResource FormLabel_Style}" Text="项目选项卡："/>
+                                            <!-- 运行Tab表头行数（[set] run_tab_rows）：单行/双行/自适应，
+ 单行/双行放不下的Tab收进右侧下拉箭头（参考IntelliJ） -->
+                                            <ComboBox Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="3" Style="{StaticResource FormValue_Style}" MinWidth="80" Width="Auto"
+ItemsSource="{Binding RunTabRowsOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
+SelectedValue="{Binding SelectedRunTabRows}"
+ToolTip="运行Tab表头显示行数：单行/双行时放不下的Tab收进右侧下拉箭头"/>
+                                        </Grid>
+                                    </GroupBox>
 
-                                    <!-- 监听/关闭时：固定宽度，顶部对齐，不随窗口变化 -->
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Top">
-                                        <!-- 监听：端口/心跳判定的超时时间与频次 -->
-                                        <GroupBox Header="应用监控" Padding="5" Margin="10,5,0,10">
-                                            <WrapPanel MaxWidth="380" Width="Auto">
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="超时/s"/>
-                                                    <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorTimeoutText, UpdateSourceTrigger=PropertyChanged}"
-                                                        Template="{StaticResource PlaceHolder}" Tag="15" MinWidth="50" Width="Auto"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="频次/s"/>
-                                                    <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding MonitorIntervalText, UpdateSourceTrigger=PropertyChanged}"
-                                                        Template="{StaticResource PlaceHolder}" Tag="5" MinWidth="50" Width="Auto"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="日志换行"/>
-                                                    <!-- 系统级换行配置（[set] log_wrap，默认不换行）：项目换行为“系统”时按此生效 -->
-                                                    <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="110" Width="Auto"
-                                                        ItemsSource="{Binding LogWrapOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
-                                                        SelectedValue="{Binding SelectedLogWrap}"
-                                                        ToolTip="运行日志默认换行方式，项目换行为“系统”时使用"/>
-                                                </StackPanel>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <TextBlock Style="{StaticResource FormLabel_Style}" Text="Tab行数"/>
-                                                    <!-- 运行Tab表头行数（[set] run_tab_rows）：单行/双行/自适应，
-                                                         单行/双行放不下的Tab收进右侧下拉箭头（参考IntelliJ） -->
-                                                    <ComboBox Style="{StaticResource FormValue_Style}" MinWidth="80" Width="Auto"
-                                                        ItemsSource="{Binding RunTabRowsOptions}" DisplayMemberPath="Text" SelectedValuePath="Code"
-                                                        SelectedValue="{Binding SelectedRunTabRows}"
-                                                        ToolTip="运行Tab表头显示行数：单行/双行时放不下的Tab收进右侧下拉箭头"/>
-                                                </StackPanel>
-                                            </WrapPanel>
-                                        </GroupBox>
-                                    </StackPanel>
                                 </Grid>
 
                             </Grid>

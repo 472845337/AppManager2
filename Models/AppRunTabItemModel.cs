@@ -94,8 +94,10 @@ namespace AppManager2.Models {
             var family = Application.Current?.TryFindResource(ThemeUtils.KeyLogFontFamily) as FontFamily
                 ?? SystemFonts.MessageFontFamily;
             var typeface = new Typeface(family, FontStyles.Normal, bold ? FontWeights.Bold : FontWeights.Normal, FontStretches.Normal);
+            // 必须用6参构造：7参重载（末尾pixelsPerDip）是.NET 4.6.2新增，服务器只有4.6.x时
+            // JIT到此抛MissingMethodException（日志宽度测量只需近似值，按系统DPI即可）
             var formatted = new FormattedText(text, System.Globalization.CultureInfo.CurrentUICulture,
-                FlowDirection.LeftToRight, typeface, LogFontSize, Brushes.Black, 1.0);
+                FlowDirection.LeftToRight, typeface, LogFontSize, Brushes.Black);
             return formatted.Width;
         }
 

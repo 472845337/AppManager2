@@ -220,7 +220,15 @@ namespace AppManager2.ViewModels {
             InitializeCommands();
             WireEvents();
             InitMessageTimer();
-            LoadData();
+            try {
+                LoadData();
+            } catch (Exception ex) {
+                // 主窗口由StartupUri在XAML(BAML)加载中实例化，这里抛出的异常会被包装成
+                // XamlParseException导致启动即闪退；弹窗展示完整异常（含内部异常）并继续启动，
+                // 树/监控为空但能直接看到真实错误（如SQLite缺X86/X64互操作DLL、目录无写权限）
+                MessageBox.Show("启动加载数据失败：\r\n" + ex, "错误",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
             IpInfo = "IP:" + IpUtils.GetLocalIp();
             AuthorInfo = "作者:" + Configs.AuthorEmail;
         }
