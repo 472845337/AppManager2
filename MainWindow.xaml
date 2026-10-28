@@ -39,10 +39,17 @@
                                               ToolTip="选项卡选项">
                                     <ToggleButton.ContextMenu>
                                         <ContextMenu DataContext="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource Self}}">
-                                            <!-- 多行显示=自适应行数（run_tab_rows=0），取消恢复上次配置的单/双行 -->
-                                            <MenuItem Header="多行显示选项卡" IsCheckable="True"
-                                                      IsChecked="{Binding IsRunTabMultiRow}"
-                                                      Command="{Binding ToggleRunTabMultiRowCommand}"/>
+                                            <!-- Tab行数三选一（与设置-应用监控-Tab行数一致）：
+                                                 勾选态经StringEqualityConverter绑定SelectedRunTabRows，命令切换后互斥刷新 -->
+                                            <MenuItem Header="单行" IsCheckable="True"
+                                                      IsChecked="{Binding SelectedRunTabRows, Converter={StaticResource StringEqualityConverter}, ConverterParameter=1, Mode=OneWay}"
+                                                      Command="{Binding SetRunTabRowsCommand}" CommandParameter="1"/>
+                                            <MenuItem Header="双行" IsCheckable="True"
+                                                      IsChecked="{Binding SelectedRunTabRows, Converter={StaticResource StringEqualityConverter}, ConverterParameter=2, Mode=OneWay}"
+                                                      Command="{Binding SetRunTabRowsCommand}" CommandParameter="2"/>
+                                            <MenuItem Header="自适应" IsCheckable="True"
+                                                      IsChecked="{Binding SelectedRunTabRows, Converter={StaticResource StringEqualityConverter}, ConverterParameter=0, Mode=OneWay}"
+                                                      Command="{Binding SetRunTabRowsCommand}" CommandParameter="0"/>
                                         </ContextMenu>
                                     </ToggleButton.ContextMenu>
                                 </ToggleButton>

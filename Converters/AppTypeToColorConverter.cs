@@ -1,10 +1,10 @@
+using AppManager2.AMUtils;
+using AppManager2.Config;
 using System;
 using System.Globalization;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Media;
-using AppManager2.AMUtils;
-using AppManager2.Config;
 
 namespace AppManager2.Converters {
     /// <summary>

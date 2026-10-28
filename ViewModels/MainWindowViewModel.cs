@@ -5,7 +5,6 @@ using AppManager2.Config;
 using AppManager2.Excep;
 using AppManager2.Models;
 using AppManager2.Services;
-using IniParser.Model;
 using Newtonsoft.Json;
 using PropertyChanged;
 using System;
@@ -61,33 +60,28 @@ namespace AppManager2.ViewModels {
         public string SelectedLogWrap { get; set; } = Configs.LogWrapNone;
 
         // 运行Tab表头行数（1单行/2双行/0不限，超出部分收进右侧下拉，参考IntelliJ）：
-        // SelectedRunTabRows为设置页下拉选中Code，RunTabRows为控件绑定值；
-        // IsRunTabMultiRow为选项卡选项菜单的"多行显示"勾选态（=自适应行数）
+        // SelectedRunTabRows为设置页下拉与选项卡选项菜单共用的选中Code，RunTabRows为控件绑定值；
+        // 切换即时更新界面，落盘在主窗口关闭时统一处理（Configs.RunTabRows保持启动基线）
         public ObservableCollection<LogWrapOption> RunTabRowsOptions { get; set; }
         [OnChangedMethod(nameof(OnSelectedRunTabRowsChanged))]
         public string SelectedRunTabRows { get; set; } = "1";
+        // 初始值必须与SelectedRunTabRows默认"1"对齐：启动LoadRunTabRows赋相同值时
+        // Fody不触发变更通知，RunTabRows靠自身初始值保持1（否则默认0=自适应，单行配置失效）
         public int RunTabRows { get; set; } = 1;
-        public bool IsRunTabMultiRow { get; set; }
-        // 多行显示取消后恢复的单/双行配置
-        private int _runTabRowsRestore = 1;
-        public ICommand ToggleRunTabMultiRowCommand { get; set; }
+        public ICommand SetRunTabRowsCommand { get; set; }
 
         private void OnSelectedRunTabRowsChanged() {
             // 非法值回落单行
             RunTabRows = int.TryParse(SelectedRunTabRows, out var rows) && rows >= 0 ? rows : 1;
-            IsRunTabMultiRow = RunTabRows == 0;
         }
 
         /// <summary>
-        /// 选项卡选项菜单-多行显示选项卡开关（参考VS2022）：勾选=自适应多行（0），
-        /// 取消=恢复上次的单/双行配置；即时更新界面，落盘在主窗口关闭时统一处理
+        /// 选项卡选项菜单-Tab行数三选一（单行/双行/自适应，与设置页下拉同源同值）
         /// </summary>
-        private void OnToggleRunTabMultiRow(object obj) {
-            if (RunTabRows == 0) {
-                SelectedRunTabRows = _runTabRowsRestore.ToString();
-            } else {
-                _runTabRowsRestore = RunTabRows;
-                SelectedRunTabRows = "0";
+        private void OnSetRunTabRows(object obj) {
+            var code = obj as string;
+            if (!string.IsNullOrEmpty(code)) {
+                SelectedRunTabRows = code;
             }
         }
 
@@ -99,7 +93,7 @@ namespace AppManager2.ViewModels {
 
         [OnChangedMethod(nameof(RaiseResetSettingCommand))]
         public int SettingTabControlSelectedIndex { get; set; }
-        
+
         public void RaiseResetSettingCommand() {
             RelayCommand.Raise(new RelayCommand[] { ResetSoftwareSettingsCommand });
         }
@@ -262,8 +256,7 @@ namespace AppManager2.ViewModels {
             SendInputCommand = new RelayCommand(OnSendInput);
             ExpandAllCommand = new RelayCommand(OnExpandAll);
             CollapseAllCommand = new RelayCommand(OnCollapseAll);
-            ToggleRunTabMultiRowCommand = new RelayCommand(OnToggleRunTabMultiRow);
-            DetailAppCommand = new RelayCommand(OnDetailApp);
+            SetRunTabRowsCommand = new RelayCommand(OnSetRunTabRows);            DetailAppCommand = new RelayCommand(OnDetailApp);
             WarnSwitchAppCommand = new RelayCommand(OnWarnSwitchApp);
             LocateFileCommand = new RelayCommand(OnLocateFile);
             GroupStartCommand = new RelayCommand(OnGroupStart);
@@ -274,14 +267,14 @@ namespace AppManager2.ViewModels {
             ApplySettingsCommand = new RelayCommand(OnApplySettings);
             ResetSoftwareSettingsCommand = new RelayCommand(OnResetSoftwareSettings, o => {
                 bool canExecute = true;
-                if((GlobalFontFamily.Equals(Configs.DefaultFontFamily) && GlobalFontSizeText.Equals("12") && GlobalFontColor.Equals("Black")
+                if ((GlobalFontFamily.Equals(Configs.DefaultFontFamily) && GlobalFontSizeText.Equals("12") && GlobalFontColor.Equals("Black")
                     && BtnFontFamily.Equals(Configs.DefaultFontFamily) && BtnFontSizeText.Equals("14")
                     && TreeFontFamily.Equals(Configs.DefaultFontFamily) && TreeFontSizeText.Equals("16") && TreeFontColor.Equals("Black")
                     && LogFontColor.Equals("White") && LogBgColor.Equals("Black") && LogFontSizeText.Equals("14") && LogFontFamily.Equals("Consolas"))
                     || SettingTabControlSelectedIndex == 0) {
                     canExecute = false;
                 }
-                return canExecute; 
+                return canExecute;
             });
             BrowseJdkCommand = new RelayCommand(OnBrowseJdk);
             BrowseLogCommand = new RelayCommand(OnBrowseLog);

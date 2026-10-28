@@ -4,7 +4,6 @@ using System;
 using System.IO;
 using System.Text;
 using System.Windows;
-using AppManager2.AMUtils;
 
 namespace AppManager2 {
     public partial class App : Application {

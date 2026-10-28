@@ -1,4 +1,3 @@
-using AppManager2.AMUtils;
 using AppManager2.Commands;
 using AppManager2.Config;
 using AppManager2.Models;
@@ -184,7 +183,7 @@ namespace AppManager2.ViewModels {
                 if (MessageBoxResult.Cancel == result) {
                     Port = priApp.Port;
                     return;
-                } else if(MessageBoxResult.No == result){
+                } else if (MessageBoxResult.No == result) {
                     return;
                 }
             }

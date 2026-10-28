@@ -394,7 +394,7 @@ namespace AppManager2 {
         /// 为最小化时，最小化并保留任务栏图标（托盘图标同样可恢复/退出）
         /// </summary>
         protected override void OnClosing(CancelEventArgs e) {
-            
+
             if (!_reallyClose) {
                 if (Configs.ClosedTypeMin.Equals(Configs.ClosedType)) {
                     // 最小化：用最小化代替Hide（Hide会连任务栏按钮一起移除），任务栏图标保留
@@ -1077,10 +1077,6 @@ namespace AppManager2 {
                     CollapseTreeViewItems(container);
                 }
             }
-        }
-
-        private void TextBox_MouseWheel(object sender, MouseWheelEventArgs e) {
-
         }
     }
 }
