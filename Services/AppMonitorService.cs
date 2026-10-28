@@ -141,7 +141,9 @@ namespace AppManager2.Services {
         }
 
         private Task MonitorAppAsync(AppRecord app, bool appInit) {
-            if (app == null) return Task.CompletedTask;
+            // Task.CompletedTask是4.6新增，4.5.1服务器上抛MissingMethodException；
+            // Task.FromResult<object>(null)（4.5即有）返回已完成的Task<object>，可作Task用
+            if (app == null) return Task.FromResult<object>(null);
             return Task.Run(() => {
                 try {
                     MonitorCore(app, appInit);

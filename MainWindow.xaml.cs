@@ -439,6 +439,9 @@ namespace AppManager2 {
         /// VM侧只保留运行值（拖分栏/切Tab行数即时更新界面），落盘统一收敛到这里
         /// </summary>
         private void PreCloseSaveData() {
+            // 启动早期失败（窗口构造/VM创建未完成）即进入关闭流程时，控件与几何值不可用，
+            // 此时没有有效状态可保存，直接跳过（避免NRE与NaN转int溢出，也不破坏原ini）
+            if (ViewModel == null) return;
             var iniData = new IniData();
 
             // —— 窗口几何与最大化标记（[system]）：最小化按正常状态记录；非正常态取RestoreBounds（还原后的正常态尺寸）——
@@ -455,10 +458,11 @@ namespace AppManager2 {
                 var bounds = RestoreBounds;
                 x = bounds.X; y = bounds.Y; w = bounds.Width; h = bounds.Height;
             }
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormHeight, ref Configs.Height, Convert.ToInt32(h));
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormWidth, ref Configs.Width, Convert.ToInt32(w));
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, ref Configs.Left, Convert.ToInt32(x));
-            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, ref Configs.Top, Convert.ToInt32(y));
+            // 窗口未完成布局即关闭时Left/Top为NaN，Convert.ToInt32对NaN/越界值抛OverflowException
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormHeight, ref Configs.Height, SafeIniInt(h));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormWidth, ref Configs.Width, SafeIniInt(w));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormLocationX, ref Configs.Left, SafeIniInt(x));
+            IniParserUtils.ConfigIniData(iniData, Configs.IniSectionSystem, Configs.IniKeyFormLocationY, ref Configs.Top, SafeIniInt(y));
 
             // —— 主Tab索引（[app] main_tab_index）——
             IniParserUtils.ConfigIniData(iniData, Configs.IniSectionApp, Configs.IniKeyAppMainTabIndex, ref Configs.SelectedIndex, MainTabControl.SelectedIndex);
@@ -522,6 +526,17 @@ namespace AppManager2 {
             SaveSetIfChanged(iniData, Configs.IniKeySetLogFontFamily, vm.LogFontFamily ?? string.Empty, Configs.LogFontFamily);
 
             IniParserUtils.SaveIniData(SystemIniPath, iniData);
+        }
+
+        /// <summary>
+        /// 几何值写ini的int安全转换：NaN/无穷按0（窗口未完成布局即关闭），
+        /// 越界钳到int范围，避免Convert.ToInt32抛OverflowException
+        /// </summary>
+        private static int SafeIniInt(double value) {
+            if (double.IsNaN(value) || double.IsInfinity(value)) return 0;
+            if (value >= int.MaxValue) return int.MaxValue;
+            if (value <= int.MinValue) return int.MinValue;
+            return Convert.ToInt32(value);
         }
 
         /// <summary>
@@ -613,7 +628,8 @@ namespace AppManager2 {
         /// </summary>
         private void MainTabControl_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (!ReferenceEquals(e.OriginalSource, MainTabControl)) return;
-            Dispatcher.BeginInvoke(new Action(() => Keyboard.Focus(MainTabControl)));
+            // InvokeAsync而非BeginInvoke(delegate)：后者是params重载，零参调用编译成Array.Empty（4.6新增）
+            Dispatcher.InvokeAsync(() => Keyboard.Focus(MainTabControl));
         }
 
         /// <summary>

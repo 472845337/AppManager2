@@ -311,7 +311,8 @@ namespace AppManager2.ViewModels {
             if (app.Dispatcher.CheckAccess()) {
                 action();
             } else {
-                app.Dispatcher.BeginInvoke(action);
+                // InvokeAsync而非BeginInvoke(delegate)：后者是params重载，零参调用编译成Array.Empty（4.6新增）
+                app.Dispatcher.InvokeAsync(action);
             }
         }
 

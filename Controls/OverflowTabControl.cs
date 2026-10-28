@@ -67,7 +67,9 @@ namespace AppManager2.Controls {
         /// </summary>
         private void SyncOverflowUI() {
             _headerPanel?.InvalidateMeasure();
-            Dispatcher.BeginInvoke(new Action(RefreshOverflowUI), System.Windows.Threading.DispatcherPriority.Background);
+            // 用InvokeAsync而非BeginInvoke(delegate[,priority])：后者绑定的是params object[]重载，
+            // 零参调用会被Roslyn编译成Array.Empty<object>()（.NET 4.6新增），4.5.x服务器上抛MissingMethodException
+            Dispatcher.InvokeAsync(RefreshOverflowUI, System.Windows.Threading.DispatcherPriority.Background);
         }
 
         public override void OnApplyTemplate() {
