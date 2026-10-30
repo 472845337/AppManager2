@@ -8,14 +8,14 @@ namespace AppManager2.Views {
     /// <summary>
     /// 工具页（PostDog）：Code-behind只承担布局记忆和选项即时持久化两类View职责
     /// </summary>
-    public partial class ToolPageView : UserControl {
-        private ToolPageViewModel ViewModel => DataContext as ToolPageViewModel;
+    public partial class PostDogPageView : UserControl {
+        private PostDogViewModel ViewModel => DataContext as PostDogViewModel;
 
         // 响应区Ctrl+滚轮字体缩放范围（步长1，超限保持不变且不提示；大小不持久化，恢复默认12）
         private const double ResponseFontMinSize = 8;
         private const double ResponseFontMaxSize = 40;
 
-        public ToolPageView() {
+        public PostDogPageView() {
             InitializeComponent();
         }
 
@@ -24,7 +24,7 @@ namespace AppManager2.Views {
         /// HeadSplitPercent=Head占整列百分比；ParamSplitPercent=参数占下方区域（参数+响应）百分比。
         /// 百分比换算为星号长度，行高随父窗口等比缩放
         /// </summary>
-        private void ToolPageView_Loaded(object sender, RoutedEventArgs e) {
+        private void PostDogPageView_Loaded(object sender, RoutedEventArgs e) {
             var vm = ViewModel;
             if (vm == null) return;
             var headPct = ClampPercent(vm.HeadSplitPercent);
@@ -51,7 +51,7 @@ namespace AppManager2.Views {
         }
 
         private static double ClampPercent(double value) {
-            return Math.Max(ToolPageViewModel.SplitPercentMin, Math.Min(ToolPageViewModel.SplitPercentMax, value));
+            return Math.Max(PostDogViewModel.SplitPercentMin, Math.Min(PostDogViewModel.SplitPercentMax, value));
         }
 
         /// <summary>由上下两段实际高度计算上段占比，总高为0时保持原值不动</summary>

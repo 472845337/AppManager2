@@ -842,7 +842,10 @@ ToolTip="运行Tab表头显示行数：单行/双行时放不下的Tab收进右�
             <TabItem Header="工具" Width="80">
                 <TabControl TabStripPlacement="Left">
                     <TabItem Header="PostDog">
-                        <views:ToolPageView/>
+                        <views:PostDogPageView/>
+                    </TabItem>
+                    <TabItem Header="WebBrowser">
+                        <views:WebBrowserPageView/>
                     </TabItem>
                 </TabControl>
 

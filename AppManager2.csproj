@@ -71,12 +71,21 @@
     <Reference Include="CliWrap, Version=2.5.0.0">
       <HintPath>packages\CliWrap.2.5.0\lib\net45\CliWrap.dll</HintPath>
     </Reference>
+    <Reference Include="Microsoft.Web.WebView2.Core, Version=1.0.4314.35, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Web.WebView2.1.0.4314.35\lib\net462\Microsoft.Web.WebView2.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Web.WebView2.Wpf, Version=1.0.4314.35, Culture=neutral, PublicKeyToken=2a8ab48044d2601e, processorArchitecture=MSIL">
+      <HintPath>packages\Microsoft.Web.WebView2.1.0.4314.35\lib\net462\Microsoft.Web.WebView2.Wpf.dll</HintPath>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <ApplicationDefinition Include="App.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Views\WebBrowserPageView.xaml.cs">
+      <DependentUpon>WebBrowserPageView.xaml</DependentUpon>
+    </Compile>
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
@@ -85,7 +94,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
-    <Page Include="Views\ToolPageView.xaml">
+    <Page Include="Views\PostDogPageView.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -116,23 +125,31 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Behaviors\RichTextBoxHelper.cs" />
+    <Compile Include="Converters\BindingProxy.cs" />
     <Compile Include="Converters\HalfConverter.cs" />
     <Compile Include="MainWindow.xaml.cs">
       <DependentUpon>MainWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="Views\WebBrowserPageView.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Commands\RelayCommand.cs" />
     <Compile Include="ViewModels\BaseViewModel.cs" />
     <Compile Include="ViewModels\MainWindowViewModel.cs" />
     <Compile Include="ViewModels\AppPageViewModel.cs" />
-    <Compile Include="ViewModels\ToolPageViewModel.cs" />
+    <Compile Include="ViewModels\PostDogViewModel.cs" />
+    <Compile Include="ViewModels\WebBrowserPageViewModel.cs" />
+    <Compile Include="ViewModels\WebBrowserTabViewModel.cs" />
     <Compile Include="ViewModels\AppFormViewModel.cs" />
     <Compile Include="ViewModels\HttpSendFormViewModel.cs" />
     <Compile Include="ViewModels\AppExportViewModel.cs" />
     <Compile Include="Models\AppRecord.cs" />
     <Compile Include="Models\HttpSend.cs" />
+    <Compile Include="Models\WebFavorite.cs" />
     <Compile Include="Models\HttpSendParam.cs" />
     <Compile Include="Models\TableData.cs" />
     <Compile Include="Models\TreeItemModel.cs" />
@@ -154,6 +171,7 @@
     <Compile Include="CustomEnum\RawTypeEnum.cs" />
     <Compile Include="Services\DbMaintenance.cs" />
     <Compile Include="Services\HttpSendService.cs" />
+    <Compile Include="Services\WebFavoriteService.cs" />
     <Compile Include="Services\HttpSendParamService.cs" />
     <Compile Include="Services\AppService.cs" />
     <Compile Include="Services\AppDbService.cs" />
@@ -167,8 +185,8 @@
     <Compile Include="Controls\OverflowTabControl.cs" />
     <Compile Include="Converters\FontConverters.cs" />
     <Compile Include="Excep\BusinessException.cs" />
-    <Compile Include="Views\ToolPageView.xaml.cs">
-      <DependentUpon>ToolPageView.xaml</DependentUpon>
+    <Compile Include="Views\PostDogPageView.xaml.cs">
+      <DependentUpon>PostDogPageView.xaml</DependentUpon>
     </Compile>
     <Compile Include="Views\AppFormWindow.xaml.cs">
       <DependentUpon>AppFormWindow.xaml</DependentUpon>
@@ -252,11 +270,13 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="packages\Fody.6.6.4\build\Fody.targets" Condition="Exists('packages\Fody.6.6.4\build\Fody.targets')" />
+  <Import Project="packages\Microsoft.Web.WebView2.1.0.4314.35\build\Microsoft.Web.WebView2.targets" Condition="Exists('packages\Microsoft.Web.WebView2.1.0.4314.35\build\Microsoft.Web.WebView2.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>这台计算机上缺少此项目引用的 NuGet 程序包。使用“NuGet 程序包还原”可下载这些程序包。有关更多信息，请参见 http://go.microsoft.com/fwlink/?LinkID=322105。缺少的文件是 {0}。</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('packages\Fody.6.6.4\build\Fody.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Fody.6.6.4\build\Fody.targets'))" />
     <Error Condition="!Exists('packages\PropertyChanged.Fody.4.1.0\build\PropertyChanged.Fody.props')" Text="$([System.String]::Format('$(ErrorText)', 'packages\PropertyChanged.Fody.4.1.0\build\PropertyChanged.Fody.props'))" />
+    <Error Condition="!Exists('packages\Microsoft.Web.WebView2.1.0.4314.35\build\Microsoft.Web.WebView2.targets')" Text="$([System.String]::Format('$(ErrorText)', 'packages\Microsoft.Web.WebView2.1.0.4314.35\build\Microsoft.Web.WebView2.targets'))" />
   </Target>
 </Project>

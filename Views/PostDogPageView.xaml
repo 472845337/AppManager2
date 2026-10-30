@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="AppManager2.Views.ToolPageView"
+﻿<UserControl x:Class="AppManager2.Views.PostDogPageView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
@@ -7,9 +7,9 @@
              xmlns:vm="clr-namespace:AppManager2.ViewModels"
              mc:Ignorable="d"
              d:DesignHeight="400" d:DesignWidth="500"
-             Loaded="ToolPageView_Loaded">
+             Loaded="PostDogPageView_Loaded">
     <UserControl.DataContext>
-        <vm:ToolPageViewModel/>
+        <vm:PostDogViewModel/>
     </UserControl.DataContext>
 
     <!-- 对应老项目PostDog页：URL行 + Head区(记忆高度) + 参数/响应分栏(记忆高度) + 底部选项 -->
@@ -23,7 +23,7 @@
         <!-- URL行：类型/地址/发送/保存/历史（保存/历史对应老项目SaveHttpButton/SendHistoryButton的纯图标按钮） -->
         <DockPanel Grid.Row="0">
             <ComboBox Style="{StaticResource FormValue_Style}" DockPanel.Dock="Left" Width="Auto" MinWidth="80" SelectedItem="{Binding HttpType}"
-                      ItemsSource="{x:Static vm:ToolPageViewModel.HttpTypes}"/>
+                      ItemsSource="{x:Static vm:PostDogViewModel.HttpTypes}"/>
             <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}"
                     Command="{Binding ViewHttpHistoryCommand}" ToolTip="发送记录">
                 <Image Source="pack://application:,,,/AppManager2;component/Resources/icon/ToolForm/send_history.ico" Width="18" Height="18"/>
@@ -36,7 +36,7 @@
                     Command="{Binding SendHttpRequestCommand}"
                     Content="{Binding SendButtonText}"/>
             <TextBox Style="{StaticResource FormValue_Style}" Text="{Binding HttpUrl, UpdateSourceTrigger=PropertyChanged}"
-                     VerticalContentAlignment="Center" Template="{StaticResource PlaceHolder}" Tag="请求地址，自动补http://"/>
+                     VerticalContentAlignment="Center" Template="{StaticResource PlaceHolder}" Tag="请求地址，IP自动补http://，域名补https://"/>
         </DockPanel>
 
         <!-- 两个分隔器放在同一Grid（5行）：PreviousAndNext只重排相邻两行的空间、其余行像素高度保持不变，
@@ -151,7 +151,7 @@
                         <DockPanel Grid.Row="0" DockPanel.Dock="Left" LastChildFill="False">
                             <TextBlock Style="{StaticResource FormLabel_Style}" Text="类型:"/>
                             <ComboBox Style="{StaticResource FormValue_Style}" Width="110" SelectedItem="{Binding RawType}"
-                                    ItemsSource="{x:Static vm:ToolPageViewModel.RawTypes}"/>
+                                    ItemsSource="{x:Static vm:PostDogViewModel.RawTypes}"/>
                         </DockPanel>
                         <TextBox Margin="5" Padding="5" Grid.Row="1" Text="{Binding RawBody, UpdateSourceTrigger=PropertyChanged}" AcceptsReturn="True"
          VerticalContentAlignment="Top" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" FontSize="15"/>

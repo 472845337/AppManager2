@@ -23,7 +23,7 @@ namespace AppManager2.ViewModels {
     /// URL行 + Head参数区 + Form/Raw参数区 + 响应区，分隔高度持久化到System.ini [tool]
     /// </summary>
     [AddINotifyPropertyChangedInterface]
-    public class ToolPageViewModel : BaseViewModel {
+    public class PostDogViewModel : BaseViewModel {
         /// <summary>raw参数类型下拉选项（与老项目RawTypeEnum枚举名一致）</summary>
         public static readonly string[] RawTypes = { "Text", "JavaScript", "Json", "Html", "Xml" };
 
@@ -85,7 +85,7 @@ namespace AppManager2.ViewModels {
         public ICommand ClearAllHeaderCommand { get; set; }
         public ICommand ClearResponseCommand { get; set; }
 
-        public ToolPageViewModel() {
+        public PostDogViewModel() {
             Instance = this;
             FormParams = new ObservableCollection<HttpFormParamItem>();
             HeadParams = new ObservableCollection<HttpParamItem>();
@@ -108,7 +108,7 @@ namespace AppManager2.ViewModels {
         }
 
         /// <summary>单例入口，供发送记录窗口“重发”回填使用</summary>
-        public static ToolPageViewModel Instance { get; private set; }
+        public static PostDogViewModel Instance { get; private set; }
 
         #region 布局与选项持久化（对应老项目InitToolPage + 分隔器移动事件）
 
@@ -248,10 +248,9 @@ namespace AppManager2.ViewModels {
                 MessageBox.Show("请求URL不能为空", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            if (!url.StartsWith(HttpUtils.Http) && !url.StartsWith(HttpUtils.Https)) {
-                url = HttpUtils.Http + url;
-                HttpUrl = url;
-            }
+            // 无协议时按IP补http://、域名补https://（规则见HttpUtils.CompleteUrl）
+            url = HttpUtils.CompleteUrl(url);
+            HttpUrl = url;
 
             SendButtonText = "停止";
             HttpResponse = string.Empty;
@@ -359,10 +358,9 @@ namespace AppManager2.ViewModels {
                 MessageBox.Show("请求URL不能为空", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            if (!url.StartsWith(HttpUtils.Http) && !url.StartsWith(HttpUtils.Https)) {
-                url = HttpUtils.Http + url;
-                HttpUrl = url;
-            }
+            // 无协议时按IP补http://、域名补https://（规则见HttpUtils.CompleteUrl）
+            url = HttpUtils.CompleteUrl(url);
+            HttpUrl = url;
             HttpResponse = string.Empty;
 
             var httpSend = new HttpSend { Url = url, Type = HttpType };

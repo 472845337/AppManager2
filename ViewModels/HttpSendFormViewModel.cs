@@ -230,7 +230,7 @@ namespace AppManager2.ViewModels {
                 MessageBox.Show("未选择发送记录", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
-            ToolPageViewModel.Instance?.LoadFromHistory(SelectedHttpSend);
+            PostDogViewModel.Instance?.LoadFromHistory(SelectedHttpSend);
             if (Application.Current.MainWindow is MainWindow main) {
                 main.ShowMainWindow();
                 main.SelectMainTab(2);

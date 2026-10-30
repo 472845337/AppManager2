@@ -1,0 +1,204 @@
+﻿<UserControl x:Class="AppManager2.Views.WebBrowserPageView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:wv2="clr-namespace:Microsoft.Web.WebView2.Wpf;assembly=Microsoft.Web.WebView2.Wpf"
+             xmlns:vm="clr-namespace:AppManager2.ViewModels"
+             xmlns:converters="clr-namespace:AppManager2.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.DataContext>
+        <vm:WebBrowserPageViewModel/>
+    </UserControl.DataContext>
+
+    <!-- 多标签浏览器：Tabs走ItemsSource绑定；重写TabControl模板，TabPanel按内容宽度停靠在左侧，
+         +号紧随最后一个TabItem之后（Chrome布局，而非钉死在容器最右） -->
+    <TabControl ItemsSource="{Binding Tabs}" SelectedItem="{Binding SelectedTab}"
+                Background="Transparent" BorderThickness="1" BorderBrush="#ddd">
+        <TabControl.Resources>
+            <!-- ContextMenu不在可视树内，内部元素找不到TabControl的DataContext，
+                 用Freezable代理在TabControl声明处取容器VM，菜单内经StaticResource引用 -->
+            <converters:BindingProxy x:Key="PageVMProxy" Data="{Binding}"/>
+        </TabControl.Resources>
+
+        <!-- 标签右键菜单：关闭/关闭其他/关闭全部；CommandParameter={Binding}即被右键的标签VM -->
+        <TabControl.ItemContainerStyle>
+            <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                <Setter Property="ContextMenu">
+                    <Setter.Value>
+                        <ContextMenu>
+                            <MenuItem Header="关闭"
+                                      Command="{Binding Data.CloseTabCommand, Source={StaticResource PageVMProxy}}"
+                                      CommandParameter="{Binding}"/>
+                            <MenuItem Header="关闭其他标签"
+                                      Command="{Binding Data.CloseOtherTabsCommand, Source={StaticResource PageVMProxy}}"
+                                      CommandParameter="{Binding}"/>
+                            <MenuItem Header="关闭所有标签"
+                                      Command="{Binding Data.CloseAllTabsCommand, Source={StaticResource PageVMProxy}}"/>
+                        </ContextMenu>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+        </TabControl.ItemContainerStyle>
+
+        <TabControl.Template>
+            <ControlTemplate TargetType="TabControl">
+                <Grid KeyboardNavigation.TabNavigation="Local">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <DockPanel Grid.Row="0" LastChildFill="False">
+                        <TabPanel DockPanel.Dock="Left" IsItemsHost="True" Margin="4 4 0 0"/>
+                        <Button DockPanel.Dock="Left" VerticalAlignment="Top"
+                                Style="{StaticResource Btn_Suc}" Content="+"
+                                Command="{Binding NewTabCommand}" ToolTip="新建标签页"/>
+                    </DockPanel>
+                    <Border Grid.Row="1" BorderBrush="#ddd" BorderThickness="0 1 0 0">
+                        <ContentPresenter ContentSource="SelectedContent"/>
+                    </Border>
+                </Grid>
+            </ControlTemplate>
+        </TabControl.Template>
+
+        <!-- Tab头：页面title + ×关闭（title由浏览页经DocumentTitleChanged回填到标签VM） -->
+        <TabControl.ItemTemplate>
+            <DataTemplate>
+                <StackPanel Orientation="Horizontal">
+                    <!-- 加载动画：参考Chrome，主文档加载中在标题左侧转圈，结束自动隐藏 -->
+                    <Path Data="M 6,1 A 5,5 0 1 1 1,6" Width="12" Height="12" Stroke="#1E88E5" StrokeThickness="2"
+                          StrokeStartLineCap="Round" StrokeEndLineCap="Round" VerticalAlignment="Center" Margin="0 0 4 0"
+                          RenderTransformOrigin="0.5,0.5">
+                        <Path.RenderTransform>
+                            <RotateTransform/>
+                        </Path.RenderTransform>
+                        <Path.Triggers>
+                            <EventTrigger RoutedEvent="Loaded">
+                                <BeginStoryboard>
+                                    <Storyboard>
+                                        <DoubleAnimation Storyboard.TargetProperty="(RenderTransform).(RotateTransform.Angle)"
+                                                         From="0" To="360" Duration="0:0:0.9" RepeatBehavior="Forever"/>
+                                    </Storyboard>
+                                </BeginStoryboard>
+                            </EventTrigger>
+                        </Path.Triggers>
+                        <Path.Style>
+                            <Style TargetType="Path">
+                                <Setter Property="Visibility" Value="Collapsed"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsLoading}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Path.Style>
+                    </Path>
+                    <TextBlock Text="{Binding Title}" VerticalAlignment="Center"
+                               MaxWidth="160" TextTrimming="CharacterEllipsis" ToolTip="{Binding Title}"/>
+                    <Button Content="×" Margin="2 0 0 0" Padding="2 0"
+                            Style="{StaticResource Btn_Danger}" ToolTip="关闭标签页"
+                            Command="{Binding DataContext.CloseTabCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                            CommandParameter="{Binding}"/>
+                </StackPanel>
+            </DataTemplate>
+        </TabControl.ItemTemplate>
+
+        <!-- 标签内容=单页布局（地址行+浏览区）。切Tab会重建模板控件，但绑定/呈现的都是
+             WebBrowserTabViewModel持有的同一份状态与WebView2实例，页面状态不丢失 -->
+        <TabControl.ContentTemplate>
+            <DataTemplate>
+                <Grid>
+                    <Grid.Resources>
+                        <!-- ContextMenu不在可视树内：用代理把当前标签VM带进收藏下拉菜单 -->
+                        <converters:BindingProxy x:Key="TabVMProxy" Data="{Binding}"/>
+                    </Grid.Resources>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+
+                    <!-- 地址行：输入网址回车或点“前往”发起请求（协议自动补全，对应PostDog地址框自动补http://的习惯） -->
+                    <DockPanel Grid.Row="0">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Pri}" Content="前往" Command="{Binding NavigateCommand}"/>
+                        <!-- 五角星：未收藏空心/已收藏黄色实心，点击即收藏/取消（写库，无提示） -->
+                        <Button DockPanel.Dock="Right" Style="{StaticResource Btn_Info}"
+                                Command="{Binding DataContext.ToggleFavoriteCommand, RelativeSource={RelativeSource AncestorType=TabControl}}"
+                                CommandParameter="{Binding}" ToolTip="收藏/取消收藏">
+                            <Path Data="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"
+                                  Width="16" Height="16" Stretch="Uniform" StrokeThickness="1.2">
+                                <Path.Style>
+                                    <Style TargetType="Path">
+                                        <Setter Property="Fill" Value="Transparent"/>
+                                        <Setter Property="Stroke" Value="#888"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsFavorited}" Value="True">
+                                                <Setter Property="Fill" Value="Gold"/>
+                                                <Setter Property="Stroke" Value="Gold"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Path.Style>
+                            </Path>
+                        </Button>
+                        <!-- 左侧三角：点开收藏列表，点击某条回填地址栏（不自动访问，回车才请求） -->
+                        <Button DockPanel.Dock="Left" Style="{StaticResource Btn_Info}" Click="FavoriteButton_Click" ToolTip="收藏列表">
+                            <Path Data="M 0,0 L 10,0 L 5,6 Z" Fill="#666" Width="10" Height="6" Stretch="Fill"/>
+                            <Button.ContextMenu>
+                                <ContextMenu ItemsSource="{Binding Data.Favorites, Source={StaticResource PageVMProxy}}">
+                                    <ContextMenu.ItemContainerStyle>
+                                        <Style TargetType="MenuItem">
+                                            <Setter Property="Header" Value="{Binding Url}"/>
+                                            <Setter Property="ToolTip" Value="{Binding Title}"/>
+                                            <Setter Property="Command" Value="{Binding Data.PickFavoriteCommand, Source={StaticResource TabVMProxy}}"/>
+                                            <Setter Property="CommandParameter" Value="{Binding Url}"/>
+                                        </Style>
+                                    </ContextMenu.ItemContainerStyle>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <TextBox Style="{StaticResource FormValue_Style}"
+                                 Text="{Binding Address, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalContentAlignment="Center"
+                                 Template="{StaticResource PlaceHolder}" Tag="输入网址，回车访问"
+                                 Loaded="AddressBox_Loaded"
+                                 GotKeyboardFocus="AddressBox_GotKeyboardFocus"
+                                 LostKeyboardFocus="AddressBox_LostKeyboardFocus">
+                            <TextBox.InputBindings>
+                                <KeyBinding Key="Enter" Command="{Binding NavigateCommand}"/>
+                            </TextBox.InputBindings>
+                        </TextBox>
+                    </DockPanel>
+
+                    <!-- 浏览区：BrowserControl是标签VM持有的WebView2实例，经ContentPresenter原样呈现 -->
+                    <Grid Grid.Row="1" Margin="4">
+                        <ContentPresenter Content="{Binding BrowserControl}">
+                            <ContentPresenter.Style>
+                                <Style TargetType="ContentPresenter">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="True">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </ContentPresenter.Style>
+                        </ContentPresenter>
+                        <!-- 内核初始化失败（如本机缺少WebView2运行时）时用提示文字代替空白 -->
+                        <TextBlock Margin="10" TextWrapping="Wrap" Foreground="Red" VerticalAlignment="Top"
+                                   Text="{Binding ErrorMessage}">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding HasError}" Value="False">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Grid>
+                </Grid>
+            </DataTemplate>
+        </TabControl.ContentTemplate>
+    </TabControl>
+</UserControl>
