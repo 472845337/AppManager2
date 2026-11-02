@@ -48,11 +48,21 @@ namespace AppManager2.ViewModels {
         }
 
         private void OpenTab() {
+            OpenTab(null);
+        }
+
+        /// <summary>新开标签页：url为空开空白页；header先用“新标签页”占位，页面加载出title后经PropertyChanged回填</summary>
+        private void OpenTab(string url) {
             var tab = new WebBrowserTabViewModel();
             // 地址变化（加载完成/redirect回写）时同步该标签的五角星状态
             tab.PropertyChanged += HandleTabPropertyChanged;
+            // 页面里target=_blank/window.open的新窗口请求→在本页新开一个标签加载
+            tab.NewTabRequested += (s, targetUrl) => OpenTab(targetUrl);
             Tabs.Add(tab);
             SelectedTab = tab;
+            if (!string.IsNullOrEmpty(url)) {
+                tab.NavigateTo(url);
+            }
         }
 
         // 方法名避开Fody的On属性名Changed通知钩子约定，防止被误认

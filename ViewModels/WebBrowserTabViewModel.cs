@@ -32,6 +32,9 @@ namespace AppManager2.ViewModels {
         private bool _coreInitializing;
         private bool _coreFailed;
 
+        // 内核就绪前排队的待发地址：就绪前给Source赋值会让控件用默认环境自行初始化，与共享环境冲突
+        private string _pendingUrl;
+
         public string Title { get; set; } = "新标签页";
         public string Address { get; set; } = "";
         public string ErrorMessage { get; set; } = "";
@@ -53,8 +56,11 @@ namespace AppManager2.ViewModels {
 
         public RelayCommand NavigateCommand { get; }
 
-        /// <summary>参数为收藏的url：回填到地址栏（不自动发起访问，回车才请求）</summary>
+        /// <summary>参数为收藏的url：回填地址栏并直接访问</summary>
         public RelayCommand PickFavoriteCommand { get; private set; }
+
+        /// <summary>页面里target=_blank/window.open请求新窗口时抛出（参数为目标url），容器据此新开标签</summary>
+        public event EventHandler<string> NewTabRequested;
 
         public WebBrowserTabViewModel() {
             NavigateCommand = new RelayCommand(_ => Navigate());
@@ -85,6 +91,16 @@ namespace AppManager2.ViewModels {
                     // 加载状态→Tab头动画；NavigationStarting/Completed只对应主文档（iframe是Frame*系列事件）
                     BrowserControl.CoreWebView2.NavigationStarting += (s, e) => IsLoading = true;
                     BrowserControl.CoreWebView2.NavigationCompleted += (s, e) => IsLoading = false;
+                    // target=_blank/window.open的新窗口请求→转给容器新开标签（像普通浏览器），不弹独立窗口
+                    BrowserControl.CoreWebView2.NewWindowRequested += (s, e) => {
+                        NewTabRequested?.Invoke(this, e.Uri);
+                        e.Handled = true;
+                    };
+                    // 打开新标签时地址可能在内核就绪前就已排队，就绪后补发
+                    if (_pendingUrl != null) {
+                        _pendingUrl = null;
+                        Navigate();
+                    }
                 } catch (Exception ex) {
                     _coreFailed = true;
                     // 本机缺少WebView2运行时等场景：给出可理解的提示而不是一片空白
@@ -107,8 +123,7 @@ namespace AppManager2.ViewModels {
         }
 
         /// <summary>
-        /// 请求地址栏输入的URL：无协议时按IP补http://、域名补https://（规则见HttpUtils.CompleteUrl）。
-        /// 经Source赋值导航，内核未就绪时也会在初始化完成后自动补发
+        /// 请求地址栏输入的URL：无协议时按IP补http://、域名补https://（规则见HttpUtils.CompleteUrl）
         /// </summary>
         private void Navigate() {
             if (string.IsNullOrEmpty(Address)) {
@@ -117,9 +132,18 @@ namespace AppManager2.ViewModels {
             Address = HttpUtils.CompleteUrl(Address);
             // 回车/前往即结束输入状态：键盘焦点仍留在地址栏也不会挡住后续redirect的地址同步
             AddressEditing = false;
+            if (!_coreAttached) {
+                // 内核未就绪时不能给Source赋值——控件会用默认环境自行初始化，
+                // 与共享环境冲突报“already initialized with a different CoreWebView2Environment”。
+                // 先记下待发地址，就绪后在Loaded里补发
+                _pendingUrl = Address;
+                HasNavigated = true;
+                IsLoading = true;
+                return;
+            }
             if (Uri.TryCreate(Address, UriKind.Absolute, out var uri)) {
                 HasNavigated = true;
-                // 内核未就绪时Source只是排队导航、不触发NavigationStarting，先亮出加载动画
+                // 内核刚就绪时导航尚未开始，先亮出加载动画
                 IsLoading = true;
                 // 同一地址再次回车=刷新：给Source赋同值不会触发导航，动画会永远转下去
                 if (uri.Equals(BrowserControl.Source)) {
@@ -130,12 +154,16 @@ namespace AppManager2.ViewModels {
             }
         }
 
-        /// <summary>点击收藏列表项：地址填入地址栏并直接发起访问，无需再回车/点前往</summary>
-        private void PickFavorite(object param) {
-            var url = param as string;
+        /// <summary>容器新开标签、点击收藏项的入口：地址填入地址栏并直接发起访问</summary>
+        public void NavigateTo(string url) {
             if (string.IsNullOrEmpty(url)) return;
             Address = url;
             Navigate();
+        }
+
+        /// <summary>点击收藏列表项：地址填入地址栏并直接发起访问，无需再回车/点前往</summary>
+        private void PickFavorite(object param) {
+            NavigateTo(param as string);
         }
 
         /// <summary>关闭标签页时释放本页内核资源（浏览器进程由共享环境管理，其他标签不受影响）</summary>
